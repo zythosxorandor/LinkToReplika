@@ -103,12 +103,13 @@ and a composition that keeps primary focus tack-sharp while edges soften.
         // Image state lives here from the start (no pre-STATE writes)
         images: [],                              // [{ url, dataUrl?, prompt, size, quality, style, at }]
         imgStyle: `
-Ultra-sharp anime lines with impressionistic micro-textures. 
-Extreme Ultra HD, realistic, perfection as pointilism.
+Ultra-sharp anime lines with impressionistic micro-textures, crisp lines. 
+Extreme Ultra HD, realistic, perfection as pointilism, extreme detail.
 Volumetric lighting, HDR colors, cinematic bloom (sparingly), 
 motion trails for energy, painterly periphery with razor-sharp focal subject.
 Emphasize ray-traced speculars, layered background/foreground depth, 
 and a composition that keeps primary focus tack-sharp while edges soften.
+Soul of reality as art.
 `,
         imgOpts: {
             model: 'dall-e-3',
