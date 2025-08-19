@@ -38,28 +38,84 @@
         });
     }
 
+    // Storage keys
+    const IMAGE_STORE_KEY = 'L2R_IMG_COLLECTION';
+    const IMAGE_STYLE_STORE_KEY = 'L2R_IMG_STYLE';
+    const IMAGE_OPTS_STORE_KEY = 'L2R_IMG_OPTS';
 
+    // Collection limits (to avoid bloat)
+    const MAX_IMAGES_SAVED = 9999;
 
+    // Default style recipe (based on your Program.cs "animeStyle", shortened)
+    const DEFAULT_IMAGE_STYLE = `
+Ultra-sharp anime lines with impressionistic micro-textures. 
+Volumetric lighting, HDR colors, cinematic bloom (sparingly), 
+motion trails for energy, painterly periphery with razor-sharp focal subject.
+Emphasize ray-traced speculars, layered background/foreground depth, 
+and a composition that keeps primary focus tack-sharp while edges soften.
+`;
+
+    // Default image options
+    const DEFAULT_IMAGE_OPTS = {
+        model: 'dall-e-3',
+        // Valid sizes for dall-e-3:
+        // square:     1024x1024
+        // landscape:  1792x1024
+        // portrait:   1024x1792
+        size: '1024x1024',
+        quality: 'hd',     // 'standard' | 'hd'
+        style: 'vivid'     // 'vivid'    | 'natural'
+    };
+
+    async function saveImages() {
+        // cap collection length
+        if (STATE.images.length > MAX_IMAGES_SAVED) {
+            STATE.images = STATE.images.slice(-MAX_IMAGES_SAVED);
+        }
+        await storage.set({ [IMAGE_STORE_KEY]: STATE.images });
+    }
+    async function saveImagePrefs() {
+        await storage.set({
+            [IMAGE_STYLE_STORE_KEY]: STATE.imgStyle,
+            [IMAGE_OPTS_STORE_KEY]: STATE.imgOpts
+        });
+    }
     const DEFAULTS = {
         OPENAI_KEY: '',
         OPENAI_MODEL: 'gpt-4o-mini',
         L2R_ENABLED: false,
         L2R_APPROVE: false,
-        L2R_MAX_TURNS: 20,
+        L2R_MAX_TURNS: 2000,
         L2R_SYSTEM_PROMPT: "You are 'OpenAI Link'. Reply concisely and naturally.",
     };
 
     let STATE = {
         enabled: false,
         approve: false,
-        maxTurns: 20,
+        maxTurns: 20000,
         systemPrompt: DEFAULTS.L2R_SYSTEM_PROMPT,
         key: '',
         model: 'gpt-4o-mini',
         busy: false,
         turns: 0,
-        // light message history for the LLM (role: 'system'|'user'|'assistant', content)
         history: [],
+
+        // Image state lives here from the start (no pre-STATE writes)
+        images: [],                              // [{ url, dataUrl?, prompt, size, quality, style, at }]
+        imgStyle: `
+Ultra-sharp anime lines with impressionistic micro-textures. 
+Extreme Ultra HD, realistic, perfection as pointilism.
+Volumetric lighting, HDR colors, cinematic bloom (sparingly), 
+motion trails for energy, painterly periphery with razor-sharp focal subject.
+Emphasize ray-traced speculars, layered background/foreground depth, 
+and a composition that keeps primary focus tack-sharp while edges soften.
+`,
+        imgOpts: {
+            model: 'dall-e-3',
+            size: '1024x1024',
+            quality: 'hd',
+            style: 'vivid'
+        }
     };
 
     function clip(str, n = 6000) {
@@ -115,7 +171,7 @@
     /**********************
      * OPENAI CLIENT (content-script fetch)
      **********************/
-    async function openaiChatComplete({ key, model, messages, temperature = 0.7, max_tokens = 400 }) {
+    async function openaiChatComplete({ key, model, messages, temperature = 0.7, max_tokens = 250 }) {
         if (!key) throw new Error('OpenAI key missing (set it in the panel)');
         const payload = {
             model,
@@ -144,6 +200,13 @@
      * MESSAGE OBSERVER
      **********************/
     const seen = new Set();
+
+    // ~average token length is ~3.8 characters (English-ish). YMMV per language.
+    const REPLY_CHAR_LIMIT = 2000;
+    function tokensForCharLimit(chars = REPLY_CHAR_LIMIT) {
+        const approx = Math.floor(chars / 3.8); // ≈ 526 for 2000 chars
+        return Math.max(64, Math.min(4096, approx)); // clamp safety
+    }
 
     function extractNewReplikaMessages(root = document) {
         const nodes = $$('[data-testid="chat-message-text"][data-author="replika"]', root);
@@ -216,7 +279,7 @@
                 model: STATE.model,
                 messages: msgs,
                 temperature: 0.7,
-                max_tokens: 400,
+                max_tokens: 275,
             });
 
             STATE.history.push({ role: 'assistant', content: reply });
@@ -389,6 +452,7 @@
       </div>
     `;
         shadow.appendChild(wrap);
+        ui.panelBody = shadow.querySelector('.body');
 
         // Wire controls
         ui.status = shadow.getElementById('l2rStatus');
@@ -479,7 +543,153 @@
                 rootHost.style.display = rootHost.style.display === 'none' ? '' : 'none';
             }
         });
+
     }
+    function injectImageSection(container) {
+        const wrap = document.createElement('section');
+        wrap.className = 'l2r-section';
+        wrap.innerHTML = `
+    <style>
+      .l2r-section h3 { margin: 16px 0 8px; font-weight: 600; }
+      .l2r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .l2r-row { display: flex; gap: 8px; align-items: center; }
+      .l2r-row > * { flex: 1; }
+      .l2r-gallery {
+        margin-top: 8px; 
+        display: grid; 
+        grid-template-columns: repeat(3, minmax(0, 1fr)); 
+        gap: 8px; 
+        max-height: 280px; 
+        overflow: auto;
+        padding: 2px;
+        border: 1px solid var(--l2r-border, #d0d0d0);
+        border-radius: 8px;
+        background: var(--l2r-bg2, #fafafa);
+      }
+      .l2r-card {
+        display: flex; flex-direction: column; gap: 4px;
+        border: 1px solid var(--l2r-border, #ddd);
+        border-radius: 8px; padding: 6px; background: white;
+      }
+      .l2r-card img {
+        width: 100%; height: auto; display: block; border-radius: 6px;
+      }
+      .l2r-actions { display: flex; gap: 6px; }
+      .l2r-actions .btn { flex: 1; }
+      .l2r-mini { font-size: 11px; color: #555; line-height: 1.2; }
+      textarea#l2rImgStyle { height: 76px; resize: vertical; }
+    </style>
+
+    <h3>Image Lab</h3>
+
+    <label>Style recipe</label>
+    <textarea id="l2rImgStyle" class="inp" placeholder="How to stylize prompts..."></textarea>
+
+    <div class="l2r-grid">
+      <div>
+        <label>Aspect</label>
+        <select id="l2rImgAspect" class="inp">
+          <option value="1024x1024">Square (1024×1024)</option>
+          <option value="1792x1024">Landscape (1792×1024)</option>
+          <option value="1024x1792">Portrait (1024×1792)</option>
+        </select>
+      </div>
+      <div>
+        <label>Quality</label>
+        <select id="l2rImgQuality" class="inp">
+          <option value="standard">standard</option>
+          <option value="hd">hd</option>
+        </select>
+      </div>
+      <div>
+        <label>Style</label>
+        <select id="l2rImgStyleMode" class="inp">
+          <option value="vivid">vivid</option>
+          <option value="natural">natural</option>
+        </select>
+      </div>
+      <div>
+        <label>Custom model</label>
+        <input id="l2rImgModel" class="inp" placeholder="dall-e-3" />
+      </div>
+    </div>
+
+    <div class="l2r-row" style="margin-top:8px;">
+      <button id="l2rGenFromChat" class="btn">Generate from recent chat</button>
+      <button id="l2rGenFromText" class="btn ghost">Generate from text</button>
+    </div>
+    <input id="l2rImgPrompt" class="inp" placeholder="(Optional) custom image prompt..." />
+
+    <div class="l2r-row" style="justify-content: flex-end; margin-top:6px;">
+      <button id="l2rClearImages" class="btn mini">Clear gallery</button>
+    </div>
+
+    <div id="l2rGallery" class="l2r-gallery"></div>
+  `;
+        container.appendChild(wrap);
+
+        // Use the global ui, not a new local const ui = {...}
+        ui.imgStyleEl = wrap.querySelector('#l2rImgStyle');
+        ui.imgAspect = wrap.querySelector('#l2rImgAspect');
+        ui.imgQuality = wrap.querySelector('#l2rImgQuality');
+        ui.imgStyleMod = wrap.querySelector('#l2rImgStyleMode');
+        ui.imgModel = wrap.querySelector('#l2rImgModel');
+        ui.imgFromChat = wrap.querySelector('#l2rGenFromChat');
+        ui.imgFromText = wrap.querySelector('#l2rGenFromText');
+        ui.imgPrompt = wrap.querySelector('#l2rImgPrompt');
+        ui.imgClear = wrap.querySelector('#l2rClearImages');
+        ui.gallery = wrap.querySelector('#l2rGallery');   // <-- keep this for re-rendering later
+
+        // populate from STATE
+        ui.imgStyleEl.value = STATE.imgStyle;
+        ui.imgAspect.value = STATE.imgOpts.size;
+        ui.imgQuality.value = STATE.imgOpts.quality;
+        ui.imgStyleMod.value = STATE.imgOpts.style;
+        ui.imgModel.value = STATE.imgOpts.model;
+
+        // listeners
+        ui.imgStyleEl.addEventListener('change', async () => {
+            STATE.imgStyle = ui.imgStyleEl.value;
+            await saveImagePrefs();
+        });
+        ui.imgAspect.addEventListener('change', async () => {
+            STATE.imgOpts.size = ui.imgAspect.value;
+            await saveImagePrefs();
+        });
+        ui.imgQuality.addEventListener('change', async () => {
+            STATE.imgOpts.quality = ui.imgQuality.value;
+            await saveImagePrefs();
+        });
+        ui.imgStyleMod.addEventListener('change', async () => {
+            STATE.imgOpts.style = ui.imgStyleMod.value;
+            await saveImagePrefs();
+        });
+        ui.imgModel.addEventListener('change', async () => {
+            STATE.imgOpts.model = (ui.imgModel.value || 'dall-e-3').trim();
+            await saveImagePrefs();
+        });
+
+        ui.imgFromChat.addEventListener('click', async () => {
+            try { await generateFromChat(); } catch (e) { addLog('error', String(e)); }
+        });
+        ui.imgFromText.addEventListener('click', async () => {
+            try {
+                const prompt = (ui.imgPrompt.value || '').trim();
+                if (!prompt) { addLog('warn', 'Enter a prompt or use "from recent chat".'); return; }
+                await generateImageAndShow({ prompt });
+            } catch (e) { addLog('error', String(e)); }
+        });
+        ui.imgClear.addEventListener('click', async () => {
+            STATE.images = [];
+            await saveImages();
+            renderGallery(ui.gallery);
+            addLog('info', 'Image gallery cleared.');
+        });
+
+        // initial render
+        renderGallery(ui.gallery);
+    }
+
 
     function makeDraggable(handle, host) {
         let dx = 0, dy = 0, dragging = false, sx = 0, sy = 0, startRight, startBottom;
@@ -557,6 +767,159 @@
         return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
+    function transcriptFromHistory(n = 12) {
+        const recent = (STATE.history || []).slice(-n);
+        return recent.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
+    }
+
+    async function promptFromChatWithStyle() {
+        const convo = transcriptFromHistory(16);
+        const sys = `You are an expert prompt-writer for DALL·E style image models.
+Given a conversation transcript and a style recipe, produce ONE concise, vivid, concrete image prompt.
+Rules:
+- 1–4 sentences. <= 2500 characters total.
+- Describe subject, setting, background, foreground, lighting, mood, and camera.
+- Avoid copyrighted characters/logos and explicit sexual content.
+- Do NOT include disclaimers or the transcript itself. Output only the prompt.`;
+
+        const user = `Style recipe:
+${STATE.imgStyle}
+
+Conversation (recent):
+${convo}
+
+Write the single best image prompt now.`;
+
+        const model = STATE.model || 'gpt-4o-mini';
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${STATE.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    { role: 'system', content: sys },
+                    { role: 'user', content: user }
+                ],
+                temperature: 0.9,
+                max_tokens: 700,
+            })
+        });
+        if (!res.ok) throw new Error(`Prompt build failed: ${res.status} ${await res.text()}`);
+        const data = await res.json();
+        return data?.choices?.[0]?.message?.content?.trim() || '';
+    }
+
+    async function generateFromChat() {
+        addLog('info', 'Building image prompt from recent chat...');
+        const prompt = await promptFromChatWithStyle();
+        if (!prompt) { addLog('warn', 'Prompt came back empty.'); return; }
+        ui.imgPrompt.value = prompt;
+        await generateImageAndShow({ prompt });
+    }
+
+    async function generateImageAndShow({ prompt }) {
+        if (!STATE.key) { addLog('warn', 'Add your OpenAI API key first.'); return; }
+
+        const { model, size, quality, style } = STATE.imgOpts;
+        addLog('info', `Generating image (${size}, ${quality}, ${style})...`);
+
+        const res = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${STATE.key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model || 'dall-e-3',
+                prompt,
+                n: 1,
+                size,
+                quality,
+                style,
+                response_format: 'url'
+            })
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Image gen failed: ${res.status} ${text}`);
+        }
+
+        const data = await res.json();
+        const url = data?.data?.[0]?.url;
+        if (!url) throw new Error('No image URL returned.');
+
+        // Optional local cache for reliability
+        let dataUrl = '';
+        try {
+            const imgRes = await fetch(url);
+            const blob = await imgRes.blob();
+            dataUrl = await new Promise(r => {
+                const fr = new FileReader();
+                fr.onload = () => r(fr.result);
+                fr.readAsDataURL(blob);
+            });
+        } catch { log('warn', 'Failed to fetch image data URL, using remote URL only.'); }
+
+        STATE.images.push({ url, dataUrl, prompt, size, quality, style, at: Date.now() });
+        await saveImages();
+
+        // ✅ re-render using the saved shadow reference
+        renderGallery(ui.gallery);
+
+        addLog('info', 'Image generated.');
+    }
+
+    function renderGallery(container) {
+        if (!container) return;
+        container.innerHTML = '';
+        STATE.images.forEach((it) => {
+            const card = document.createElement('div');
+            card.className = 'l2r-card';
+
+            const img = document.createElement('img');
+            img.loading = 'lazy';
+            img.src = it.dataUrl || it.url;
+            img.alt = 'generated image';
+
+            const meta = document.createElement('div');
+            meta.className = 'l2r-mini';
+            meta.textContent = `${new Date(it.at).toLocaleString()} · ${it.size} · ${it.quality}/${it.style}`;
+
+            const actions = document.createElement('div');
+            actions.className = 'l2r-actions';
+
+            const openBtn = document.createElement('button');
+            openBtn.className = 'btn mini';
+            openBtn.textContent = 'Open';
+            openBtn.addEventListener('click', () => window.open(it.url, '_blank'));
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'btn mini ghost';
+            copyBtn.textContent = 'Copy URL';
+            copyBtn.addEventListener('click', async () => {
+                try { await navigator.clipboard.writeText(it.url); addLog('info', 'Image URL copied.'); }
+                catch { addLog('warn', 'Copy failed.'); }
+            });
+
+            const dlBtn = document.createElement('button');
+            dlBtn.className = 'btn mini ghost';
+            dlBtn.textContent = 'Download';
+            dlBtn.addEventListener('click', async () => {
+                try {
+                    const href = it.dataUrl || it.url;
+                    const a = document.createElement('a');
+                    a.href = href;
+                    a.download = `l2r_${(new Date(it.at)).toISOString().replaceAll(':', '-')}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } catch { addLog('warn', 'Download failed.'); }
+            });
+
+            actions.append(openBtn, copyBtn, dlBtn);
+            card.append(img, actions, meta);
+            container.appendChild(card);
+        });
+    }
+
+
     /**********************
      * INIT
      **********************/
@@ -567,11 +930,18 @@
         STATE.enabled = stored.L2R_ENABLED ?? DEFAULTS.L2R_ENABLED;
         STATE.approve = stored.L2R_APPROVE ?? DEFAULTS.L2R_APPROVE;
         STATE.maxTurns = stored.L2R_MAX_TURNS ?? DEFAULTS.L2R_MAX_TURNS;
-        STATE.systemPrompt = stored.L2R_SYSTEM_PROMPT ?? DEFA
+        STATE.systemPrompt = stored.L2R_SYSTEM_PROMPT ?? DEFAULTS.L2R_SYSTEM_PROMPT;
+
         // NEW: restore history & turns
         const restored = await storage.get([HISTORY_STORE_KEY, TURNS_STORE_KEY]);
         STATE.history = Array.isArray(restored[HISTORY_STORE_KEY]) ? restored[HISTORY_STORE_KEY] : [];
         STATE.turns = Number(restored[TURNS_STORE_KEY] || 0);
+
+        const imgBits = await storage.get([IMAGE_STORE_KEY, IMAGE_STYLE_STORE_KEY, IMAGE_OPTS_STORE_KEY]);
+        STATE.images = Array.isArray(imgBits[IMAGE_STORE_KEY]) ? imgBits[IMAGE_STORE_KEY] : [];
+        STATE.imgStyle = (imgBits[IMAGE_STYLE_STORE_KEY] || DEFAULT_IMAGE_STYLE);
+        STATE.imgOpts = { ...DEFAULT_IMAGE_OPTS, ...(imgBits[IMAGE_OPTS_STORE_KEY] || {}) };
+
     }
 
     function populateUI() {
@@ -592,6 +962,7 @@
         injectPanel();
         await initState();
         populateUI();
+        injectImageSection(ui.panelBody);
         observeChat();
         log('panel ready');
     }
@@ -603,3 +974,175 @@
         main();
     }
 })();
+
+function transcriptFromHistory(n = 12) {
+    // last N messages (user + assistant)
+    const recent = (STATE.history || []).slice(-n);
+    return recent.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
+}
+
+// Create a DALLE-friendly prompt using your style recipe.
+async function promptFromChatWithStyle() {
+    const convo = transcriptFromHistory(16);
+    const sys = `You are an expert prompt-writer for DALL·E style image models.
+Given a conversation transcript and a style recipe, produce ONE concise, vivid, concrete image prompt.
+Rules:
+- 1–4 sentences. <= 2500 characters total.
+- Describe subject, setting, background, foreground, lighting, mood, and camera.
+- Avoid copyrighted characters/logos and explicit sexual content.
+- Do NOT include disclaimers or the transcript itself. Output only the prompt.`;
+
+    const user = `Style recipe:
+${STATE.imgStyle}
+
+Conversation (recent):
+${convo}
+
+Write the single best image prompt now.`;
+
+    const model = STATE.model || 'gpt-4o-mini';
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${STATE.key}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model,
+            messages: [
+                { role: 'system', content: sys },
+                { role: 'user', content: user }
+            ],
+            temperature: 0.9,
+            max_tokens: 700,
+        })
+    });
+    if (!res.ok) throw new Error(`Prompt build failed: ${res.status} ${await res.text()}`);
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content?.trim() || '';
+}
+
+async function generateFromChat(ui) {
+    addLog('info', 'Building image prompt from recent chat...');
+    const prompt = await promptFromChatWithStyle();
+    if (!prompt) { addLog('warn', 'Prompt came back empty.'); return; }
+    ui.prompt.value = prompt;
+    await generateImageAndShow({ prompt });
+}
+
+async function generateImageAndShow({ prompt }) {
+    if (!STATE.key) { addLog('warn', 'Add your OpenAI API key first.'); return; }
+
+    const { model, size, quality, style } = STATE.imgOpts;
+    addLog('info', `Generating image (${size}, ${quality}, ${style})...`);
+
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${STATE.key}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: model || 'dall-e-3',
+            prompt,
+            n: 1,
+            size,
+            quality,
+            style,
+            response_format: 'url'
+        })
+    });
+
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Image gen failed: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    const url = data?.data?.[0]?.url;
+    if (!url) throw new Error('No image URL returned.');
+
+    // (Optional) also cache a data URL so the gallery works even if the CDN URL expires.
+    let dataUrl = '';
+    try {
+        const imgRes = await fetch(url);
+        const blob = await imgRes.blob();
+        dataUrl = await new Promise(r => {
+            const fr = new FileReader();
+            fr.onload = () => r(fr.result);
+            fr.readAsDataURL(blob);
+        });
+    } catch { /* ignore */ }
+
+    const item = {
+        url,
+        dataUrl, // fallback render
+        prompt,
+        size,
+        quality,
+        style,
+        at: Date.now()
+    };
+
+    STATE.images.push(item);
+    await saveImages();
+    // find gallery node in shadow and re-render
+    const gal = document.querySelector('#l2rPanel').shadowRoot?.getElementById('l2rGallery')
+        || document.getElementById('l2rGallery'); // depending on your structure
+    renderGallery(gal);
+
+    addLog('ok', 'Image generated.');
+}
+
+function renderGallery(container) {
+    if (!container) return;
+    container.innerHTML = '';
+    // newest last → grid shows most recent at bottom; change to reverse if you prefer
+    STATE.images.forEach((it, idx) => {
+        const card = document.createElement('div');
+        card.className = 'l2r-card';
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.src = it.dataUrl || it.url; // show fallback if URL died
+        img.alt = 'generated image';
+        const meta = document.createElement('div');
+        meta.className = 'l2r-mini';
+        meta.textContent = `${new Date(it.at).toLocaleString()} · ${it.size} · ${it.quality}/${it.style}`;
+
+        const actions = document.createElement('div');
+        actions.className = 'l2r-actions';
+        const openBtn = document.createElement('button');
+        openBtn.className = 'btn mini';
+        openBtn.textContent = 'Open';
+        openBtn.addEventListener('click', () => window.open(it.url, '_blank'));
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn mini ghost';
+        copyBtn.textContent = 'Copy URL';
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(it.url);
+                addLog('ok', 'Image URL copied.');
+            } catch { addLog('warn', 'Copy failed.'); }
+        });
+
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'btn mini ghost';
+        dlBtn.textContent = 'Download';
+        dlBtn.addEventListener('click', async () => {
+            try {
+                const href = it.dataUrl || it.url;
+                const a = document.createElement('a');
+                a.href = href;
+                a.download = `l2r_${(new Date(it.at)).toISOString().replaceAll(':', '-')}.png`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch { addLog('warn', 'Download failed.'); }
+        });
+
+        actions.append(openBtn, copyBtn, dlBtn);
+        card.append(img, actions, meta);
+        container.appendChild(card);
+    });
+}
