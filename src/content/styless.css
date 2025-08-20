@@ -1,0 +1,26 @@
+.card{display:block;width:100%;background:#111827F2;color:white;border:1px solid #1f2937;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden}
+.hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#0b1220;border-bottom:1px solid #1f2937;cursor:move}
+.hdr h3{margin:0;font-size:14px;font-weight:600;letter-spacing:.2px}
+.hdr .pill{margin-left:auto;font-size:10px;opacity:.8;background:#1f2937;padding:3px 6px;border-radius:999px}
+.body{padding:10px 12px;display:grid;gap:10px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.row{display:grid;gap:6px}
+.hrow{display:flex;gap:8px;align-items:center}
+.row-inline{display:flex;gap:8px}
+input,select,textarea,button{font:12px system-ui;background:#0f172a;border:1px solid #273248;border-radius:8px;padding:7px 8px;color:#e5e7eb}
+input::placeholder,textarea::placeholder{color:#64748b}
+input:focus,select:focus,textarea:focus{outline:1px solid #3b82f6;border-color:#3b82f6}
+.log{background:#0a0f1f;border:1px dashed #273248;border-radius:8px;padding:8px;height:180px;overflow:auto;color:#e5e7eb;font-size:12px;line-height:1.35}
+.line{margin-bottom:6px;white-space:pre-wrap}
+.tag{display:inline-block;min-width:60px;font-size:11px;opacity:.85}
+.tag.replika{color:#10b981}.tag.openai{color:#60a5fa}.tag.info{color:#9ca3af}.tag.error{color:#f87171}.tag.warn{color:#f59e0b}
+.chip{border:1px solid #334155;background:#0b1326;border-radius:8px;padding:6px;margin-top:6px}
+.chip .actions{display:flex;gap:6px;margin-top:6px}
+.small{font-size:11px;opacity:.8}
+.btn{cursor:pointer}.btn.primary{background:#1d4ed8;border-color:#1d4ed8}.btn:disabled{opacity:.5;cursor:not-allowed}
+.l2r-tabs{display:flex;gap:6px;margin-bottom:8px;max-height: 800px; min-height: 800px; min-width: 900px; max-width: 900px;}
+.l2r-tab{padding:6px 10px;border:1px solid #273248;border-radius:999px;background:#0f172a}
+.l2r-tab.active{background:#1f2937}
+.l2r-gallery{margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-height:280px;overflow:auto;padding:2px;border:1px solid #273248;border-radius:8px;background:#0a0f1f}
+.l2r-card{display:flex;flex-direction:column;gap:4px;border:1px solid #273248;border-radius:8px;padding:6px;background:#0b1326}
+.l2r-card img{width:100%;height:auto;display:block;border-radius:6px}
+.l2r-actions{display:flex;gap:6px}

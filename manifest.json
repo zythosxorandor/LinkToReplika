@@ -23,7 +23,7 @@
                 "https://my.replika.com/*"
             ],
             "js": [
-                "src/content/replika-panel.js"
+                "src/content/content-panel.js"
             ],
             "run_at": "document_end"
         }
