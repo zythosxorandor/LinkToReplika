@@ -6,9 +6,12 @@ import { NavTabs } from '../ui/NavTabs.js';
 import { SettingsTab } from '../tabs/SettingsTab.js';
 import { LinkingTab } from '../tabs/LinkingTab.js';
 import { ImageLabTab } from '../tabs/ImageLabTab.js';
-import { LogsTab } from '../tabs/LogsTab.js';
+//import { LogsTab } from '../tabs/LogsTab.js';
 import { TimedActionsTab } from '../tabs/TimedActionsTab.js';
 import { observeChat } from '../core/replika-dom.js';
+import { installChessOverlay } from './components/ChessOverlay.js';
+import { installLogDock } from './components/Logging.js';
+
 
 const PANEL_CSS = `
 
@@ -52,7 +55,7 @@ const PANEL_CSS = `
 .hdr{
   display:flex;align-items:center;gap:8px;
   padding:10px 12px;
-  background:#0b1220;border-bottom:1px solid #1f2937;cursor:move;
+  background:#0b1220;border-bottom:1px solid #1f2937;
   /* lock header height so math stays stable */
   min-height:42px; height:42px;
 }
@@ -125,6 +128,7 @@ input:focus,select:focus,textarea:focus{outline:1px solid #3b82f6;border-color:#
 
 (function main() {
   let rootHost, shadow, bodyEl;
+
   const bus = createBus();
 
   function injectPanel() {
@@ -191,11 +195,20 @@ input:focus,select:focus,textarea:focus{outline:1px solid #3b82f6;border-color:#
 
   async function start() {
     injectPanel();
+    installLogDock(bus);
+    installChessOverlay(bus);
     await initState();
     mountTabs();
     observeChat({
-      onIncoming: (_text) => {
-        bus.emit('log', { tag: 'replika', text: _text });
+      /* 
+            onIncoming: (_text) => {
+              bus.emit('log', { tag: 'replika', text: _text });
+              bus.emit('incoming');
+            } 
+      */
+      onIncoming: (text) => {
+        bus.emit('log', { tag: 'replika', text });
+        bus.emit('chat:text', text); // <-- board listens for this
         bus.emit('incoming');
       }
     });
