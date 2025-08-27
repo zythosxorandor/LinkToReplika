@@ -143,7 +143,7 @@ input:focus,select:focus,textarea:focus{outline:1px solid #3b82f6;border-color:#
     rootHost.style.right = '14px';
     rootHost.style.bottom = '14px';
 
-    rootHost.style.width = '320px';
+    rootHost.style.width = '380px';
     rootHost.style.height = '900px';
 
     document.documentElement.appendChild(rootHost);
