@@ -110,10 +110,6 @@ function injectStyles() {
     
   #__l2r_chess_toggle {
     position: fixed; top: 232px; left: 12px; z-index: 2147483646;
-    font: 12px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-    padding: 6px 10px; border-radius: 999px; border: 1px solid #273248;
-    background: #0f172a; color: #e5e7eb; cursor: pointer;
-    box-shadow: 0 6px 22px rgba(0,0,0,.35);
   }
   #__l2r_chess_container {
     position: fixed; left: 12px; bottom: 12px; width: 420px; height: 420px;
@@ -209,6 +205,7 @@ export function installChessOverlay(bus) {
         btn = document.createElement('button');
         btn.id = '__l2r_chess_toggle';
         btn.textContent = '♟ Chess';
+        btn.className = 'l2r-btn';
         document.documentElement.appendChild(btn);
     }
 

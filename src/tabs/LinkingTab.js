@@ -81,7 +81,7 @@ export function LinkingTab({ bus }) {
       STATE.history.push({ role: 'assistant', content: reply });
       STATE.turns += 1;
       await saveHistory();
-      bus.emit('log', { tag: 'openai', text: reply });
+      //bus.emit('log', { tag: 'openai', text: reply });
 
       if (STATE.approve) {
         bus.emit('approval:add', reply);
