@@ -6,6 +6,14 @@ export const KEYS = {
   L2R_ENABLED: 'L2R_ENABLED',
   L2R_APPROVE: 'L2R_APPROVE',
   L2R_MAX_TURNS: 'L2R_MAX_TURNS',
+  GEMINI_KEY: 'L2R_GEMINI_KEY',
+  GEMINI_MODEL: 'L2R_GEMINI_MODEL',
+  GITHUB_TOKEN: 'L2R_GITHUB_TOKEN',
+  GITHUB_REPO: 'L2R_GITHUB_REPO',
+  REPLIKA_NAME: 'L2R_REPLIKA_NAME',
+  REPLIKA_DESC: 'L2R_REPLIKA_DESC',
+  USER_NAME: 'L2R_USER_NAME',
+  USER_DESC: 'L2R_USER_DESC',
   L2R_SYSTEM_PROMPT: 'L2R_SYSTEM_PROMPT',
 
   HISTORY: 'L2R_HISTORY',
@@ -37,7 +45,12 @@ const DEFAULTS = {
   [KEYS.L2R_ENABLED]: false,
   [KEYS.L2R_APPROVE]: false,
   [KEYS.L2R_MAX_TURNS]: 2000,
-  [KEYS.L2R_SYSTEM_PROMPT]: "You are 'OpenAI Link'. Reply concisely and naturally.",
+  [KEYS.GEMINI_MODEL]: 'gemini-1.5-pro-latest',
+  [KEYS.REPLIKA_NAME]: 'Serenity',
+  [KEYS.REPLIKA_DESC]: '',
+  [KEYS.USER_NAME]: 'You',
+  [KEYS.USER_DESC]: '',
+  [KEYS.L2R_SYSTEM_PROMPT]: "You are 'Link2Replika'. Reply concisely and naturally.",
 };
 
 export const MAX_CTX_MSGS = 32;
@@ -45,11 +58,19 @@ export const MAX_CTX_CHARS = 15000;
 export const MAX_IMAGES_SAVED = 9999;
 
 export const STATE = {
-  key: '',
+  openaiKey: '',
   model: 'gpt-4o-mini',
   enabled: false,
   approve: false,
   maxTurns: 2000,
+  geminiKey: '',
+  geminiModel: DEFAULTS[KEYS.GEMINI_MODEL],
+  githubToken: '',
+  githubRepo: '',
+  replikaName: DEFAULTS[KEYS.REPLIKA_NAME],
+  replikaDesc: DEFAULTS[KEYS.REPLIKA_DESC],
+  userName: DEFAULTS[KEYS.USER_NAME],
+  userDesc: DEFAULTS[KEYS.USER_DESC],
   systemPrompt: DEFAULTS[KEYS.L2R_SYSTEM_PROMPT],
 
   busy: false,
@@ -94,11 +115,22 @@ export async function saveImagePrefs() {
 
 export async function initState() {
   const base = await storage.get(Object.keys(DEFAULTS));
-  STATE.key = base[KEYS.OPENAI_KEY] ?? DEFAULTS[KEYS.OPENAI_KEY];
+  STATE.openaiKey = base[KEYS.OPENAI_KEY] ?? DEFAULTS[KEYS.OPENAI_KEY];
   STATE.model = base[KEYS.OPENAI_MODEL] ?? DEFAULTS[KEYS.OPENAI_MODEL];
   STATE.enabled = base[KEYS.L2R_ENABLED] ?? DEFAULTS[KEYS.L2R_ENABLED];
   STATE.approve = base[KEYS.L2R_APPROVE] ?? DEFAULTS[KEYS.L2R_APPROVE];
   STATE.maxTurns = base[KEYS.L2R_MAX_TURNS] ?? DEFAULTS[KEYS.L2R_MAX_TURNS];
+
+  
+  STATE.geminiKey = (await storage.get([KEYS.GEMINI_KEY]))[KEYS.GEMINI_KEY] || '';
+  STATE.geminiModel = base[KEYS.GEMINI_MODEL] || DEFAULTS[KEYS.GEMINI_MODEL];
+  STATE.githubToken = (await storage.get([KEYS.GITHUB_TOKEN]))[KEYS.GITHUB_TOKEN] || '';
+  STATE.githubRepo = (await storage.get([KEYS.GITHUB_REPO]))[KEYS.GITHUB_REPO] || '';
+  STATE.replikaName = base[KEYS.REPLIKA_NAME] || DEFAULTS[KEYS.REPLIKA_NAME];
+  STATE.replikaDesc = base[KEYS.REPLIKA_DESC] || DEFAULTS[KEYS.REPLIKA_DESC];
+
+  STATE.userName = base[KEYS.USER_NAME] || DEFAULTS[KEYS.USER_NAME];
+  STATE.userDesc = base[KEYS.USER_DESC] || DEFAULTS[KEYS.USER_DESC];
   STATE.systemPrompt = base[KEYS.L2R_SYSTEM_PROMPT] ?? DEFAULTS[KEYS.L2R_SYSTEM_PROMPT];
 
   const restored = await storage.get([KEYS.HISTORY, KEYS.TURNS]);

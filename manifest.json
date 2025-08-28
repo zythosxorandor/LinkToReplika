@@ -14,7 +14,8 @@
         "https://my.replika.com/*",
         "https://api.openai.com/*",
         "https://*.blob.core.windows.net/*",
-        "https://*.oaistatic.com/*"
+        "https://*.oaistatic.com/*",
+        "https://generativelanguage.googleapis.com/*"
     ],
     "content_scripts": [
         {

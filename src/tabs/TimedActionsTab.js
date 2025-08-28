@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 export function TimedActionsTab({ bus }) {
   const wrap = document.createElement('section');
   wrap.innerHTML = `

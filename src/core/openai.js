@@ -9,13 +9,13 @@ export function tokensForCharLimit(chars = REPLY_CHAR_LIMIT) {
 }
 
 export async function chatComplete({ messages, temperature = 0.7, charLimit = REPLY_CHAR_LIMIT }) {
-  if (!STATE.key) throw new Error('OpenAI key missing (set it in the panel)');
+  if (!STATE.openaiKey) throw new Error('OpenAI key missing (set it in the panel)');
   const model = STATE.model || 'gpt-4o-mini';
   //const max_tokens = tokensForCharLimit(charLimit);
 
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${STATE.key}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${STATE.openaiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, messages, temperature }),
   });
   if (!resp.ok) {
