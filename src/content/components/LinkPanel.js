@@ -10,29 +10,34 @@ const PANEL_CSS = `
  :host,*{box-sizing:border-box}
  .card{
    display:block;width:100%;height:100%;
-   background:#111827F2;color:white;border:1px solid #1f2937;
-   border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+   background:var(--l2r-panel);color:var(--l2r-fg);border:1px solid var(--l2r-border);
+   border-radius:12px;box-shadow:var(--l2r-shadow);
    overflow:hidden;
  }
  .hdr{
    display:flex;align-items:center;gap:8px;
-   padding:4px 2px;
-   background:#0b1220;
-   border-bottom:1px solid #1f2937;
-   /*min-height:42px;*/
+   padding:6px 8px;
+   background:#0f172a;
+   border-bottom:1px solid var(--l2r-border);
  }
  .pill{margin-left:auto;font-size:12px;opacity:.85}
  .body{ padding:8px;height:calc(100% - 64px) }
  /* Tabs */
  .l2r-tabs-wrap{display:flex;flex-direction:column;height:100%;min-height:0}
- .l2r-tabs{display:flex;gap:6px;margin-bottom:8px;flex:0 0 34px;overflow:hidden}
- .l2r-tab{padding:6px 10px;border:1px solid #273248;border-radius:999px;background:#0f172a; color: #e5e7eb;}
+ .l2r-tabs{display:flex;gap:6px;margin-bottom:8px;flex:0 0 auto;overflow:hidden;flex-wrap:wrap}
+ .l2r-tab{padding:6px 10px;border:1px solid var(--l2r-border);border-radius:999px;background:#0f172a; color: var(--l2r-fg);}
  .l2r-tab.active{background:#1f2937}
- .l2r-tabpanel{flex:1 1 auto;min-height:0;overflow:auto;border:1px solid #273248;border-radius:8px;padding:8px;background:#0a0f1f}
+ .l2r-tabpanel{flex:1 1 auto;min-height:0;overflow:auto;border:1px solid var(--l2r-border);border-radius:8px;padding:8px;background:var(--l2r-bg-soft)}
+ /* Inputs and buttons inside the panel */
+ input,select,textarea{font:12px system-ui;background:var(--l2r-bg-soft);border:1px solid var(--l2r-border);border-radius:8px;padding:7px 8px;color:var(--l2r-fg)}
+ input::placeholder,textarea::placeholder{color:#64748b}
+ input:focus,select:focus,textarea:focus{outline:1px solid var(--l2r-accent);border-color:var(--l2r-accent)}
+ .btn,.l2r-btn{padding:6px 10px;border:1px solid var(--l2r-border);border-radius:999px;background:#0f172a;color:var(--l2r-fg);cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.35)}
+ .btn:hover,.l2r-btn:hover{background:#243041;border-color:#9399a4}
+ .btn.mini,.l2r-btn.mini{padding:3px 8px;font-size:11px}
  /* Textareas used in tabs */
- #l2rSystem{height:540px;font-family:monospace;font-size:12px;color:#e5e7eb;background:#0f172a;border:1px solid #273248;border-radius:8px;padding:8px}
- #l2rImgStyle{width:100%;height:190px;font-family:monospace;font-size:12px;color:#e5e7eb;background:#0f172a;border:1px solid #273248;border-radius:8px;padding:8px}
- `;
+ textarea{min-height:110px}
+`;
 
 function addPanelToggle(rootHost) {
     if (document.getElementById('__l2r_panel_toggle')) return;
@@ -116,6 +121,7 @@ export function installLinkPanel(bus) {
     // Small top-right toggle button (like chess / logs have theirs)
     addPanelToggle(rootHost);
 }
+
 
 
 

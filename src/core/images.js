@@ -22,13 +22,13 @@ export function renderGallery(container, { bus }) {
     const openBtn = document.createElement('button');
     openBtn.className = 'btn mini';
     openBtn.textContent = 'Open';
-    openBtn.addEventListener('click', () => window.open(it.url, '_blank'));
+    openBtn.addEventListener('click', () => window.open(it.dataUrl || it.url, '_blank'));
 
     const copyBtn = document.createElement('button');
     copyBtn.className = 'btn mini ghost';
-    copyBtn.textContent = 'Copy URL';
+    copyBtn.textContent = 'Copy Image';
     copyBtn.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(it.url); bus.emit('log', { tag: 'info', text: 'Image URL copied.' }); }
+      try { const toCopy = it.dataUrl || it.url; await navigator.clipboard.writeText(toCopy); bus.emit('log', { tag: 'info', text: 'Image copied to clipboard.' }); }
       catch { bus.emit('log', { tag: 'warn', text: 'Copy failed.' }); }
     });
 
@@ -67,7 +67,7 @@ export async function generateImageAndShow({ prompt, bus, galleryEl }) {
       size,
       quality,
       style,
-      response_format: 'url',
+      response_format: 'b64_json',
     })
   });
 
@@ -77,21 +77,12 @@ export async function generateImageAndShow({ prompt, bus, galleryEl }) {
   }
 
   const data = await res.json();
-  const url = data?.data?.[0]?.url;
-  if (!url) throw new Error('No image URL returned.');
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) throw new Error('No image data returned.');
+  const dataUrl = `data:image/png;base64,${b64}`;
 
-  let dataUrl = '';
-  try {
-    const imgRes = await fetch(url);
-    const blob = await imgRes.blob();
-    dataUrl = await new Promise(r => {
-      const fr = new FileReader();
-      fr.onload = () => r(fr.result);
-      fr.readAsDataURL(blob);
-    });
-  } catch { /* ok */ }
-
-  STATE.images.push({ url, dataUrl, prompt, size, quality, style, at: Date.now() });
+  // Save persistent data URL; url left blank for legacy compatibility
+  STATE.images.push({ url: '', dataUrl, prompt, size, quality, style, at: Date.now() });
   await saveImages();
   renderGallery(galleryEl, { bus });
   bus.emit('log', { tag: 'info', text: 'Image generated.' });

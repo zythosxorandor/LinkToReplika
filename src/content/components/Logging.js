@@ -148,3 +148,4 @@ export async function installLogDock(bus) {
     bus?.on?.('log', ({ tag = 'info', text = '' } = {}) => append(tag, text));
 }
 
+

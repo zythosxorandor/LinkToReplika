@@ -1,49 +1,59 @@
-{
-    "manifest_version": 3,
-    "name": "LinkToReplika",
-    "version": "0.1.0",
-    "description": "AutoIt-like control layer that lets an API/LLM chat with Replika through a Chrome extension.",
-    "permissions": [
-        "storage",
-        "scripting",
-        "activeTab",
-        "tabs"
-    ],
-    "host_permissions": [
-        "https://replika.com/*",
-        "https://my.replika.com/*",
-        "https://api.openai.com/*",
-        "https://*.blob.core.windows.net/*",
-        "https://*.oaistatic.com/*",
-        "https://generativelanguage.googleapis.com/*"
-    ],
-    "content_scripts": [
-        {
-            "matches": [
-                "https://replika.com/*",
-                "https://my.replika.com/*"
-            ],
-            "js": [
-                "src/content/content-panel.js"
-            ],
-            "run_at": "document_end"
-        }
-    ],
-    "icons": {
-        "16": "public/icons/icon16.png",
-        "32": "public/icons/icon32.png",
-        "48": "public/icons/icon48.png",
-        "128": "public/icons/icon128.png"
-    },
-    "web_accessible_resources": [
-        {
-            "resources": [
-                "public/*",
-                "assets/*"
-            ],
-            "matches": [
-                "<all_urls>"
-            ]
-        }
-    ]
+﻿{
+    "manifest_version":  3,
+    "name":  "LinkToReplika",
+    "version":  "0.1.0",
+    "description":  "AutoIt-like control layer that lets an API/LLM chat with Replika through a Chrome extension.",
+    "permissions":  [
+                        "storage",
+                        "unlimitedStorage",
+                        "scripting",
+                        "activeTab",
+                        "tabs"
+                    ],
+    "host_permissions":  [
+                             "https://replika.com/*",
+                             "https://my.replika.com/*",
+                             "https://api.openai.com/*",
+                             "https://*.blob.core.windows.net/*",
+                             "https://*.oaistatic.com/*",
+                             "https://generativelanguage.googleapis.com/*"
+                         ],
+    "content_scripts":  [
+                            {
+                                "matches":  [
+                                                "https://replika.com/*",
+                                                "https://my.replika.com/*"
+                                            ],
+                                "js":  [
+                                           "src/content/main.js"
+                                       ],
+                                "run_at":  "document_end"
+                            }
+                        ],
+    "icons":  {
+                  "16":  "public/icons/icon16.png",
+                  "32":  "public/icons/icon32.png",
+                  "48":  "public/icons/icon48.png",
+                  "128":  "public/icons/icon128.png"
+              },
+    "web_accessible_resources":  [
+                                     {
+                                         "resources":  [
+                                                           "public/*",
+                                                           "assets/*"
+                                                       ],
+                                         "matches":  [
+                                                         "\u003call_urls\u003e"
+                                                     ]
+                                     }
+                                 ],
+    "action":  {
+                   "default_title":  "LinkToReplika",
+                   "default_popup":  "popup.html"
+               },
+    "options_ui":  {
+                       "page":  "options.html",
+                       "open_in_tab":  true
+                   }
 }
+

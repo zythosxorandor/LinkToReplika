@@ -1,4 +1,4 @@
-export function NavTabs({ tabs, onChange, activeId }) {
+﻿export function NavTabs({ tabs, onChange, activeId }) {
   const wrap = document.createElement('div');
   wrap.className = 'l2r-tabs-wrap';
   wrap.innerHTML = `
@@ -18,7 +18,7 @@ export function NavTabs({ tabs, onChange, activeId }) {
       btn.className = 'l2r-tab' + (t.id === current ? ' active' : '');
       btn.setAttribute('role', 'tab');
       btn.setAttribute('aria-selected', String(t.id === current));
-      btn.textContent = t.title;
+      if (t.icon) { btn.innerHTML = t.icon; btn.title = t.title; btn.setAttribute("aria-label", t.title); } else { btn.textContent = t.title; }
       btn.addEventListener('click', () => {
         current = t.id;
         renderBar();
@@ -39,3 +39,4 @@ export function NavTabs({ tabs, onChange, activeId }) {
   renderBar(); renderPanel();
   return wrap;
 }
+
