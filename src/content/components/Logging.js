@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+﻿/* eslint-disable no-undef */
 import { escapeHTML, clip } from '../../core/util.js';
 import { injectReply } from '../../core/replika-dom.js';
 
@@ -102,7 +102,7 @@ export async function installLogDock(bus) {
 
     const toggle = document.createElement('button');
     toggle.id = '__l2r_log_toggle';
-    toggle.textContent = '🪵 Logs';
+    toggle.textContent = 'Logs';
     toggle.className = 'l2r-btn';
     document.documentElement.appendChild(toggle);
 
@@ -147,3 +147,4 @@ export async function installLogDock(bus) {
     window.__l2r_logDock = { log: append };
     bus?.on?.('log', ({ tag = 'info', text = '' } = {}) => append(tag, text));
 }
+

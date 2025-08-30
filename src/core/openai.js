@@ -1,10 +1,10 @@
-/* eslint-disable no-unused-vars */
+﻿/* eslint-disable no-unused-vars */
 import { STATE } from './state.js';
 
 export const REPLY_CHAR_LIMIT = 2048 * 10;
 
 export function tokensForCharLimit(chars = REPLY_CHAR_LIMIT) {
-  const approx = Math.floor(chars / 3.8); // ≈ 526 for 2000 chars
+  const approx = Math.floor(chars / 3.8); //// ≈ 526 for 2000 chars
   return Math.max(64, Math.min(4096, approx));
 }
 
@@ -24,7 +24,7 @@ export async function chatComplete({ messages, temperature = 0.7, charLimit = RE
   }
   const json = await resp.json();
   const raw = (json?.choices?.[0]?.message?.content || '').trim();
-  // hard-clip to guarantee Replika-safe length:
+  //// hard-clip to guarantee Replika-safe length:
   return raw;
 }
 
@@ -35,7 +35,7 @@ export function transcriptFromHistory(n = 12) {
 
 export async function promptFromChatWithStyle() {
   const convo = transcriptFromHistory(16);
-  const sys = `You are an expert prompt-writer for DALL·E style image models.
+  const sys = `You are an expert prompt-writer for DALL-E style image models.
 Given a conversation transcript and a style recipe, produce ONE concise, vivid, concrete image prompt.
 Rules:
 - 1–4 sentences. <= 2500 characters total.
@@ -71,7 +71,7 @@ Write the single best image prompt now.`;
 export async function extractChessMove({ text, fen, side }) {
   const sys =
     `You are a chess move parser. Given a chat message and the current position (FEN), ` +
-    `determine if the message containsa legal move for the side to move: (${side}). You are allowed to determine and return a valid/correct from the text if one can be determined.` +
+    `determine if the message contains a legal move for the side to move: (${side}). You are allowed to determine and return a valid/correct from the text if one can be determined.` +
     `If a valid move is found, output STRICT JSON with keys: move (string), notation ("san" or "uci"). ` +
     `If no clear single legal move, output STRICT JSON: {"move": "", "notation":"san"}. No prose.`;
 
@@ -80,7 +80,7 @@ export async function extractChessMove({ text, fen, side }) {
     `Side to move: ${side}\n` +
     `Message:\n${text}\n` +
     `Rules:\n- If the message is ambiguous, illegal, or not a move, return {"move":"","notation":"san"}.\n` +
-    `- IF you can determine a valid move from the message the return the correct notation even if the message was not exactly correct.\n` +
+    `- IF you can determine a valid move from the message then return the correct notation even if the message was not exactly correct.\n` +
     `- Prefer SAN if present ("Nf3", "exd5", "O-O"), otherwise use UCI ("e2e4").\n` +
     `Output JSON ONLY.`;
 
@@ -98,3 +98,5 @@ export async function extractChessMove({ text, fen, side }) {
     return null;
   }
 }
+
+

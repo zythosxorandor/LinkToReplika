@@ -1,4 +1,4 @@
-import { STATE, saveImages, saveImagePrefs } from './state.js';
+﻿import { STATE, saveImages, saveImagePrefs } from './state.js';
 
 export function renderGallery(container, { bus }) {
   if (!container) return;
@@ -52,14 +52,14 @@ export function renderGallery(container, { bus }) {
 }
 
 export async function generateImageAndShow({ prompt, bus, galleryEl }) {
-  if (!STATE.key) { bus.emit('log', { tag: 'warn', text: 'Add your OpenAI API key first.' }); return; }
+  if (!STATE.openaiKey) { bus.emit('log', { tag: 'warn', text: 'Add your OpenAI API key first.' }); return; }
 
   const { model, size, quality, style } = STATE.imgOpts;
   bus.emit('log', { tag: 'info', text: `Generating image (${size}, ${quality}, ${style})...` });
 
   const res = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${STATE.key}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${STATE.openaiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: model || 'dall-e-3',
       prompt,
@@ -102,3 +102,4 @@ export async function updateImagePrefs({ imgStyle, opts }) {
   if (opts) STATE.imgOpts = { ...STATE.imgOpts, ...opts };
   await saveImagePrefs();
 }
+

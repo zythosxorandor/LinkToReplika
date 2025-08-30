@@ -1,5 +1,4 @@
-/* eslint-disable no-undef */
-// src/content/components/LinkPanel.js
+﻿// src/content/components/LinkPanel.js
 import { STATE } from '../../core/state.js';
 import { NavTabs } from '../../ui/NavTabs.js';
 import { LinkingTab } from '../../tabs/LinkingTab.js';
@@ -50,7 +49,7 @@ function addPanelToggle(rootHost) {
     const btn = document.createElement('button');
     btn.id = '__l2r_panel_toggle';
     btn.title = 'Toggle Link Panel (Ctrl+Shift+L)';
-    btn.textContent = '🧩 Link';
+    btn.textContent = 'Link Panel';
     btn.addEventListener('click', () => {
         rootHost.style.display = rootHost.style.display === 'none' ? '' : 'none';
     });
@@ -102,9 +101,8 @@ export function installLinkPanel(bus) {
 
     // Busy pill (uses STATE just like before)
     bus.on('busy', (b) => {
-        statusEl.textContent = b ? 'Thinking…' : `Idle • Turns: ${STATE.turns}/${STATE.maxTurns}`;
+        statusEl.textContent = b ? 'Thinking...' : 'Idle';
     });
-
     // Tabs — same list you already had
     const tabs = [
         { id: 'link', title: 'Link', render: () => LinkingTab({ bus }) },
@@ -118,3 +116,16 @@ export function installLinkPanel(bus) {
     // Small top-right toggle button (like chess / logs have theirs)
     addPanelToggle(rootHost);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
-/*
-    OpenaAI API Key and other settings tab
+﻿/*
+    OpenAI API Key and other settings tab
 */
 // src/tabs/settings/OpenAI.js
 import { STATE, KEYS } from '../../core/state.js';
@@ -24,7 +24,7 @@ export function OpenAITab({ bus }) {
           <option>gpt-4o-mini</option>
           <option>gpt-4o</option>
           <option>o4-mini</option>
-          <option value="__custom__">Custom…</option>
+          <option value="__custom__">Custom...</option>
         </select>
         <input id="oaModelCustom" placeholder="custom model id" style="display:none" />
         <button class="btn mini" id="oaModelSave">Save</button>
@@ -45,17 +45,26 @@ export function OpenAITab({ bus }) {
   const saveModelBtn = wrap.querySelector('#oaModelSave');
   const maxTurnsEl = wrap.querySelector('#oaMaxTurns');
 
-  keyEl.value = STATE.key ? '••••••••••' : '';
+  // Key masking
+  const MASK = '********';
+  keyEl.value = STATE.openaiKey ? MASK : '';
   showBtn.addEventListener('click', () => {
-    keyEl.type = keyEl.type === 'password' ? 'text' : 'password';
-    if (keyEl.type === 'text' && keyEl.value === '••••••••••') keyEl.value = STATE.key || '';
+    if (keyEl.type === 'password') {
+      keyEl.type = 'text';
+      if (keyEl.value === MASK) keyEl.value = STATE.openaiKey || '';
+    } else {
+      keyEl.type = 'password';
+      keyEl.value = MASK;
+    }
   });
   saveBtn.addEventListener('click', async () => {
     const val = keyEl.value.trim();
-    if (!val || val === '••••••••••') return;
-    STATE.key = val;
-    await storage.set({ [KEYS.OPENAI_KEY]: STATE.key });
+    if (!val || val === MASK) return;
+    STATE.openaiKey = val;
+    await storage.set({ [KEYS.OPENAI_KEY]: STATE.openaiKey });
     bus?.emit?.('log', { tag: 'info', text: 'OpenAI key saved' });
+    keyEl.type = 'password';
+    keyEl.value = MASK;
   });
 
   // model

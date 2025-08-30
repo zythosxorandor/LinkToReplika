@@ -1,5 +1,5 @@
-/*
-    OpenaAI API Key and other settings tab
+﻿/*
+    Google Gemini API Key and model settings
 */
 // src/tabs/settings/GoogleGemini.js
 import { STATE, KEYS } from '../../core/state.js';
@@ -23,7 +23,7 @@ export function GoogleGeminiTab({ bus }) {
         <select id="gmModel">
           <option>gemini-1.5-pro-latest</option>
           <option>gemini-1.5-flash-latest</option>
-          <option value="__custom__">Custom…</option>
+          <option value="__custom__">Custom...</option>
         </select>
         <input id="gmModelCustom" placeholder="custom model id" style="display:none" />
         <button class="btn mini" id="gmModelSave">Save</button>
@@ -38,17 +38,25 @@ export function GoogleGeminiTab({ bus }) {
   const modelCustom = wrap.querySelector('#gmModelCustom');
   const saveModelBtn = wrap.querySelector('#gmModelSave');
 
-  keyEl.value = STATE.geminiKey ? '••••••••••' : '';
+  const MASK = '********';
+  keyEl.value = STATE.geminiKey ? MASK : '';
   showBtn.addEventListener('click', () => {
-    keyEl.type = keyEl.type === 'password' ? 'text' : 'password';
-    if (keyEl.type === 'text' && keyEl.value === '••••••••••') keyEl.value = STATE.geminiKey || '';
+    if (keyEl.type === 'password') {
+      keyEl.type = 'text';
+      if (keyEl.value === MASK) keyEl.value = STATE.geminiKey || '';
+    } else {
+      keyEl.type = 'password';
+      keyEl.value = MASK;
+    }
   });
   saveBtn.addEventListener('click', async () => {
     const val = keyEl.value.trim();
-    if (!val || val === '••••••••••') return;
+    if (!val || val === MASK) return;
     STATE.geminiKey = val;
     await storage.set({ [KEYS.GEMINI_KEY]: STATE.geminiKey });
     bus?.emit?.('log', { tag: 'info', text: 'Gemini key saved' });
+    keyEl.type = 'password';
+    keyEl.value = MASK;
   });
 
   // model

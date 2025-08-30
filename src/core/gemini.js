@@ -1,5 +1,4 @@
-/* eslint-disable no-undef */
-// src/core/gemini.js
+﻿// src/core/gemini.js
 import { STATE } from './state.js';
 
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
@@ -53,3 +52,4 @@ export async function chatComplete({ messages = [], temperature = 0.7 } = {}) {
 
   return String(text || '').trim();
 }
+

@@ -1,4 +1,4 @@
-import { STATE } from '../core/state.js';
+﻿import { STATE, saveImages } from '../core/state.js';
 import { promptFromChatWithStyle } from '../core/openai.js';
 import { generateImageAndShow, renderGallery, updateImagePrefs } from '../core/images.js';
 
@@ -89,7 +89,7 @@ export function ImageLabTab({ bus }) {
 
   imgClear.addEventListener('click', async () => {
     STATE.images = [];
-    await import('../core/state.js').then(m => m.saveImages());
+    await saveImages();
     renderGallery(gallery, { bus });
     bus.emit('log', { tag: 'info', text: 'Image gallery cleared.' });
   });
@@ -97,3 +97,4 @@ export function ImageLabTab({ bus }) {
   renderGallery(gallery, { bus });
   return wrap;
 }
+

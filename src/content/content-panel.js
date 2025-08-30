@@ -1,6 +1,4 @@
-
-/* eslint-disable no-undef */
-import { initState } from '../core/state.js';
+﻿import { initState } from '../core/state.js';
 import { createBus } from '../core/bus.js';
 import { observeChat } from '../core/replika-dom.js';
 import { installChessOverlay } from './components/ChessOverlay.js';
@@ -23,7 +21,7 @@ import { installLinkPanel } from './components/LinkPanel.js';
     }
    `;
 
-  const addCommanStyles = () => {
+  const addCommonStyles = () => {
     if (document.getElementById('__l2r_common_css')) return;
     const css = document.createElement('style');
     css.id = '__l2r_common_css';
@@ -34,7 +32,7 @@ import { installLinkPanel } from './components/LinkPanel.js';
 
   async function start() {
 
-    addCommanStyles();
+    addCommonStyles();
 
     // mount UI pieces
     installLinkPanel(bus);
@@ -58,3 +56,4 @@ import { installLinkPanel } from './components/LinkPanel.js';
     start();
   }
 })();
+

@@ -1,4 +1,4 @@
-// src/content/components/ChessOverlay.js
+﻿// src/content/components/ChessOverlay.js
 import { Chess } from 'chess.js';
 import { injectReply } from '../../core/replika-dom.js';
 import { extractChessMove } from '../../core/openai.js';
@@ -10,13 +10,11 @@ function escapeRegex(s) {
 }
 
 function normalizeMsg(text) {
-    // normalize punctuation and dashes; keep letters/numbers
-    return text
-        .replace(/[–—]/g, '-')   // en/em dashes -> hyphen
-        .replace(/[’]/g, "'")
-        .replace(/O/g, 'O')      // keep letter O
-        .replace(/0/g, '0')      // keep zero
-        ;
+    return String(text)
+        .replace(/[\u2012-\u2015]/g, '-')    // various dashes -> hyphen
+        .replace(/[\u2018\u2019]/g, "'")     // smart single quotes -> '
+        .replace(/[\u201C\u201D]/g, '"')     // smart double quotes -> "
+        .replace(/\s+/g, ' ');
 }
 
 function sanVariantsForMatch(san) {
@@ -164,8 +162,8 @@ function injectStyles() {
 }
 
 const PIECE_UNICODE = {
-    w: { p: '♙', r: '♖', n: '♘', b: '♗', q: '♕', k: '♔' },
-    b: { p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚' },
+    w: { p: 'P', r: 'R', n: 'N', b: 'B', q: 'Q', k: 'K' },
+    b: { p: 'p', r: 'r', n: 'n', b: 'b', q: 'q', k: 'k' },
 };
 
 function squareColor(file, rank) {
@@ -204,7 +202,7 @@ export function installChessOverlay(bus) {
     if (!btn) {
         btn = document.createElement('button');
         btn.id = '__l2r_chess_toggle';
-        btn.textContent = '♟ Chess';
+        btn.textContent = 'Chess';
         btn.className = 'l2r-btn';
         document.documentElement.appendChild(btn);
     }
@@ -378,3 +376,5 @@ export function installChessOverlay(bus) {
 
     container.style.display = container.style.display === 'none' ? '' : 'none';
 }
+
+
