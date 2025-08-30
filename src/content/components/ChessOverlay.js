@@ -1,5 +1,18 @@
 ﻿// src/content/components/ChessOverlay.js
 import { Chess } from 'chess.js';
+// Import cburnett piece assets so Vite bundles them and returns URLs.
+import wP from '../../assets/chess/cburnett/wP.svg?url';
+import wR from '../../assets/chess/cburnett/wR.svg?url';
+import wN from '../../assets/chess/cburnett/wN.svg?url';
+import wB from '../../assets/chess/cburnett/wB.svg?url';
+import wQ from '../../assets/chess/cburnett/wQ.svg?url';
+import wK from '../../assets/chess/cburnett/wK.svg?url';
+import bP from '../../assets/chess/cburnett/bP.svg?url';
+import bR from '../../assets/chess/cburnett/bR.svg?url';
+import bN from '../../assets/chess/cburnett/bN.svg?url';
+import bB from '../../assets/chess/cburnett/bB.svg?url';
+import bQ from '../../assets/chess/cburnett/bQ.svg?url';
+import bK from '../../assets/chess/cburnett/bK.svg?url';
 import { injectReply } from '../../core/replika-dom.js';
 import { extractChessMove } from '../../core/openai.js';
 
@@ -124,70 +137,73 @@ function injectStyles() {
     width:100%; height: calc(100% - 30px); border-radius:8px; overflow:hidden; user-select:none;
     border: 2px solid #111;
   }
-  .sq { display:flex; align-items:center; justify-content:center; }
-  .l { background-image: url('https://github.com/zythis-xorandor/replika-chess/blob/main/src/assets/whiteTile.png?raw=true'); }   /* light squares */
-  .d { background-image: url('https://github.com/zythis-xorandor/replika-chess/blob/main/src/assets/blackTile.png?raw=true'); }   /* dark squares */
+  .sq { display:flex; align-items:center; justify-content:center; position:relative; }
+  /* use local colors for squares (no external images) */
+  .l { background-color: #f0d9b5; }  /* light squares */
+  .d { background-color: #b58863; }  /* dark squares */
 
-  /* unicode piece styling */
-  .pc { line-height: 1; font-size: 44px; }
-  /* always outline white pieces in black */
-  .pc.w {
-    color: #ffffff;
-    -webkit-text-stroke: 1px #000000;
-    text-shadow:
-      0 0 1px #000, 0 0 1px #000,
-      1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000;
-    filter: drop-shadow(0 0 1px rgba(0,0,0,.6));
+  /* coordinate labels */
+  .sq::before, .sq::after {
+    position: absolute;
+    z-index: 1;
+    font: 600 10px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    pointer-events: none;
   }
-  /* always outline black pieces in white */
-  .pc.b {
-    color: #000000;
-    -webkit-text-stroke: 1px #ffffff;
-    text-shadow:
-      0 0 1px #fff, 0 0 1px #fff,
-      1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff;
-    filter: drop-shadow(0 0 1px rgba(255,255,255,.6));
-  }
+  /* rank numbers on file 'a' squares, top-left */
+  .sq[data-file="a"]::before { content: attr(data-rank); left: 4px; top: 3px; }
+  /* file letters on rank 1 squares, bottom-right */
+  .sq[data-rank="1"]::after { content: attr(data-file); right: 4px; bottom: 3px; text-transform: uppercase; }
+  /* contrast by square color */
+  .sq.l::before, .sq.l::after { color: rgba(0,0,0,.75); text-shadow: 0 1px 1px rgba(255,255,255,.6); }
+  .sq.d::before, .sq.d::after { color: rgba(255,255,255,.9); text-shadow: 0 1px 1px rgba(0,0,0,.8); }
+
+  /* image piece styling */
+  .pi { width: 90%; height: 90%; object-fit: contain; image-rendering: auto; }
 
   /* selected square highlight */
   .hi { box-shadow: inset 0 0 0 3px rgba(255,230,0,.9); }
 
   @media (max-width: 520px) {
     #__l2r_chess_container { left: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vw - 16px); }
-    .pc { font-size: calc((100vw - 16px) / 8 * 0.84); }
+    /* images scale naturally with cells */
   }
 
   `;
     document.documentElement.appendChild(style);
 }
 
-const PIECE_UNICODE = {
-    w: { p: 'P', r: 'R', n: 'N', b: 'B', q: 'Q', k: 'K' },
-    b: { p: 'p', r: 'r', n: 'n', b: 'b', q: 'q', k: 'k' },
+// Map piece codes to imported URLs (works in content scripts/build)
+const PIECE_URL = {
+    w: { p: wP, r: wR, n: wN, b: wB, q: wQ, k: wK },
+    b: { p: bP, r: bR, n: bN, b: bB, q: bQ, k: bK },
 };
 
 function squareColor(file, rank) {
     const f = 'abcdefgh'.indexOf(file);
     const r = parseInt(rank, 10);
-    return (f + r) % 2 ? 'l' : 'd'; // a1 dark convention
+    return (f + r) % 2 ? 'd' : 'l'; // a1 dark convention
 }
 
 function renderBoard(gridEl, game, selected) {
     gridEl.innerHTML = '';
     for (let r = 8; r >= 1; r--) {
         for (let f = 0; f < 8; f++) {
-            const sq = 'abcdefgh'[f] + r;
+            const fileChar = 'abcdefgh'[f];
+            const sq = fileChar + r;
             const div = document.createElement('div');
-            div.className = `sq ${squareColor('abcdefgh'[f], r)}` + (selected === sq ? ' hi' : '');
+            div.className = `sq ${squareColor(fileChar, r)}` + (selected === sq ? ' hi' : '');
             div.dataset.square = sq;
+            div.dataset.file = fileChar;
+            div.dataset.rank = String(r);
 
             const piece = game.get(sq); // { type:'p', color:'w'|'b' } or null
-            //if (piece) div.textContent = PIECE_UNICODE[piece.color][piece.type];
             if (piece) {
-                const span = document.createElement('span');
-                span.className = `pc ${piece.color}`;          // .pc.w or .pc.b
-                span.textContent = PIECE_UNICODE[piece.color][piece.type];
-                div.appendChild(span);
+                const img = document.createElement('img');
+                img.className = 'pi';
+                img.alt = `${piece.color}${piece.type}`;
+                img.draggable = false;
+                img.src = PIECE_URL[piece.color][piece.type];
+                div.appendChild(img);
             }
             gridEl.appendChild(div);
         }

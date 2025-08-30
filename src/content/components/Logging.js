@@ -70,10 +70,11 @@ function timestamp() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 async function loadLogs() {
-    return new Promise(res => chrome.storage?.local?.get([LOG_KEY], v => res(v[LOG_KEY] || [])));
+    const v = await storage.get([LOG_KEY]);
+    return v[LOG_KEY] || [];
 }
 async function saveLogs(arr) {
-    return new Promise(res => chrome.storage?.local?.set({ [LOG_KEY]: arr.slice(-500) }, res));
+    await storage.set({ [LOG_KEY]: arr.slice(-500) });
 }
 
 export async function installLogDock(bus) {

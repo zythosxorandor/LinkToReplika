@@ -3,6 +3,7 @@ import { NavTabs } from '../ui/NavTabs.js';
 import { SettingsTab } from '../tabs/SettingsTab.js';
 import { createBus } from '../core/bus.js';
 import { initState } from '../core/state.js';
+import { storage } from '../core/storage.js';
 
 const LOG_KEY = '__l2r_logs_v1';
 
@@ -26,10 +27,11 @@ function AboutTab() {
 }
 
 async function loadLogs() {
-  return new Promise(res => chrome.storage?.local?.get([LOG_KEY], v => res(v[LOG_KEY] || [])));
+  const v = await storage.get([LOG_KEY]);
+  return v[LOG_KEY] || [];
 }
 async function saveLogs(arr) {
-  return new Promise(res => chrome.storage?.local?.set({ [LOG_KEY]: arr.slice(-500) }, res));
+  await storage.set({ [LOG_KEY]: arr.slice(-500) });
 }
 function LogsTab() {
   const wrap = document.createElement('section');
