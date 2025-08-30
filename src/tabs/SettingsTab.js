@@ -17,8 +17,10 @@ export function SettingsTab({ bus }) {
   { id: 'replika',  title: 'Replika Details',icon: '💬', render: () => ReplikaDetailsTab({ bus }) },
   { id: 'system',   title: 'System Messages',icon: '⚙️', render: () => SystemMessagesTab({ bus }) },
 ];
-  const view = NavTabs({ tabs, activeId: 'openai' });
+  const view = NavTabs({ tabs, activeId: 'openai', onChange: (id) => { try { chrome?.storage?.local?.set({ L2R_SETTINGS_ACTIVE_TAB: id }); } catch {} } });
   wrap.appendChild(view);
+  try { chrome.storage.local.get(['L2R_SETTINGS_ACTIVE_TAB'], v => { const want=v?.L2R_SETTINGS_ACTIVE_TAB||'openai'; const bar=document.querySelector('.l2r-tabs'); const btn=Array.from(bar?.querySelectorAll('button')||[]).find(b => (b.title||b.textContent||'').toLowerCase().includes(want)); btn?.click(); }); } catch {}
   return wrap;
 }
+
 

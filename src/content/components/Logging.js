@@ -1,6 +1,7 @@
 ﻿/* eslint-disable no-undef */
 import { escapeHTML, clip } from '../../core/util.js';
 import { injectReply } from '../../core/replika-dom.js';
+import { storage } from '../../core/storage.js';
 
 export function Logger({ bus }) {
     const wrap = document.createElement('section');
@@ -116,6 +117,7 @@ export async function installLogDock(bus) {
     <div class="body" id="__l2r_log_body"></div>
   `;
     document.documentElement.appendChild(dock);
+    try { chrome.storage.local.get(['L2R_LOGDOCK_VISIBLE'], v => { if (v?.L2R_LOGDOCK_VISIBLE) dock.style.display = ''; }); } catch {}
 
     const body = dock.querySelector('#__l2r_log_body');
     function render(list) {
@@ -138,6 +140,7 @@ export async function installLogDock(bus) {
 
     toggle.addEventListener('click', () => {
         dock.style.display = dock.style.display === 'none' ? '' : 'none';
+        try { chrome?.storage?.local?.set({ L2R_LOGDOCK_VISIBLE: dock.style.display !== 'none' }); } catch {}
     });
     dock.querySelector('#__l2r_log_clear').addEventListener('click', async () => {
         logs.length = 0; render(logs); await saveLogs(logs);
@@ -147,5 +150,6 @@ export async function installLogDock(bus) {
     window.__l2r_logDock = { log: append };
     bus?.on?.('log', ({ tag = 'info', text = '' } = {}) => append(tag, text));
 }
+
 
 

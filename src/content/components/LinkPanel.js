@@ -56,7 +56,9 @@ function addPanelToggle(rootHost) {
     btn.title = 'Toggle Link Panel (Ctrl+Shift+L)';
     btn.textContent = 'Link Panel';
     btn.addEventListener('click', () => {
-        rootHost.style.display = rootHost.style.display === 'none' ? '' : 'none';
+        const isHidden = rootHost.style.display === 'none';
+        rootHost.style.display = isHidden ? '' : 'none';
+        try { chrome?.storage?.local?.set({ L2R_PANEL_VISIBLE: !isHidden }); } catch {}
     });
     btn.className = 'l2r-btn';
     document.documentElement.appendChild(btn);
@@ -115,9 +117,25 @@ export function installLinkPanel(bus) {
         { id: 'settings', title: 'Settings', render: () => SettingsTab({ bus }) },
         { id: 'timers', title: 'Timed Actions', render: () => TimedActionsTab({ bus }) },
     ];
-    const view = NavTabs({ tabs, onChange: () => { }, activeId: 'link' });
+    const view = NavTabs({ tabs, onChange: (id) => { try { chrome?.storage?.local?.set({ L2R_PANEL_ACTIVE_TAB: id }); } catch {} }, activeId: 'link' });
     bodyEl.appendChild(view);
+    try {
+      chrome.storage.local.get(['L2R_PANEL_ACTIVE_TAB','L2R_PANEL_VISIBLE'], (v) => {
+        const want = v?.L2R_PANEL_ACTIVE_TAB || 'link';
+        const bar = shadow.querySelector('.l2r-tabs');
+        const btn = Array.from(bar?.querySelectorAll('button') || []).find(b => (b.textContent||'').toLowerCase().includes(want === 'settings' ? 'settings' : want));
+        btn?.click();
+        const vis = v?.L2R_PANEL_VISIBLE; if (vis === false) rootHost.style.display = 'none';
+      });
+    } catch {}
 
     // Small top-right toggle button (like chess / logs have theirs)
     addPanelToggle(rootHost);
 }
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 ﻿import { STATE, saveImages, saveImagePrefs } from './state.js';
-import { promptFromChatWithStyleLLM } from './llmClient.js';
+//import { promptFromChatWithStyleLLM } from './llmClient.js';
 
 export function renderGallery(container, { bus }) {
   if (!container) return;
@@ -12,6 +12,8 @@ export function renderGallery(container, { bus }) {
     img.loading = 'lazy';
     img.src = it.dataUrl || it.url;
     img.alt = 'generated image';
+    img.style.width = '100%';
+    img.style.height = 'auto';
 
     const meta = document.createElement('div');
     meta.className = 'l2r-mini';
@@ -79,7 +81,9 @@ export async function generateImageAndShow({ prompt, bus, galleryEl }) {
 
   const data = await res.json();
   const b64 = data?.data?.[0]?.b64_json;
-  if (!b64) throw new Error('No image data returned.');
+  if (!b64) { bus.emit('log', { tag: 'warn', text: 'Image: no image data returned from API.' }); throw new Error('No image data returned.'); }
+  const b64Len = b64.length;
+  bus.emit('log', { tag: 'info', text: 'Image: data parsed (b64Len=' + b64Len + ')' });
   const dataUrl = `data:image/png;base64,${b64}`;
 
   // Save persistent data URL; url left blank for legacy compatibility
@@ -94,6 +98,9 @@ export async function updateImagePrefs({ imgStyle, opts }) {
   if (opts) STATE.imgOpts = { ...STATE.imgOpts, ...opts };
   await saveImagePrefs();
 }
+
+
+
 
 
 

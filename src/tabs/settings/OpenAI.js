@@ -67,14 +67,17 @@ export function OpenAITab({ bus }) {
     keyEl.value = MASK;
   });
 
-  // model
-  modelSel.value = STATE.model;
-  if (![...modelSel.options].some(o => o.value === STATE.model)) {
-    modelSel.value = '__custom__';
+    // model (prefer built-ins, otherwise custom)
+  const currentModel = (STATE.model || '').trim();
+  const opts = [...modelSel.options];
+  const hasBuiltin = opts.some(o => (o.value || o.textContent.trim()) === currentModel);
+  modelSel.value = hasBuiltin && currentModel ? currentModel : '__custom__';
+  if (modelSel.value === '__custom__') {
     modelCustom.style.display = '';
-    modelCustom.value = STATE.model;
-  }
-  modelSel.addEventListener('change', () => {
+    modelCustom.value = currentModel;
+  } else {
+    modelCustom.style.display = 'none';
+  }modelSel.addEventListener('change', () => {
     if (modelSel.value === '__custom__') { modelCustom.style.display = ''; modelCustom.focus(); }
     else { modelCustom.style.display = 'none'; }
   });
@@ -95,3 +98,5 @@ export function OpenAITab({ bus }) {
 
   return wrap;
 }
+
+

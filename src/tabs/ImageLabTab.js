@@ -1,7 +1,9 @@
-﻿import { STATE, saveImages } from '../core/state.js';
+﻿/* eslint-disable no-undef */
+import { STATE, saveImages } from '../core/state.js';
 import { promptFromChatWithStyleLLM } from '../core/llmClient.js';
 import { generateImageAndShow, renderGallery, updateImagePrefs } from '../core/images.js';
 import { NavTabs } from '../ui/NavTabs.js';
+import { storage } from '../core/storage.js';
 
 export function ImageLabTab({ bus }) {
   const wrap = document.createElement('section');
@@ -19,7 +21,7 @@ export function ImageLabTab({ bus }) {
     <div class="l2r-row" style="margin-top:8px;">
         <button id="l2rGenFromChat" class="btn">Build prompt from recent chat</button>
       </div>
-      <input id="l2rImgPrompt" class="inp" placeholder="(Optional) custom image prompt..." />
+      <textarea id="l2rImgPrompt" class="inp" rows="6" placeholder="(Optional) custom image prompt..."></textarea>
       <div class="l2r-row" style="justify-content: flex-end; margin-top:6px;">
         <button id="l2rGenNow" class="btn">Generate</button>
       </div>`;
@@ -120,13 +122,17 @@ export function ImageLabTab({ bus }) {
     { id: 'styles', title: 'Styles', render: () => StylesTab() },
     { id: 'gallery', title: 'Gallery', render: () => GalleryTab() },
   ];
-  const view = NavTabs({ tabs, activeId: 'gen' });
+  const view = NavTabs({ tabs, activeId: 'gen', onChange: (id) => { try { chrome?.storage?.local?.set({ L2R_IMAGELAB_ACTIVE_TAB: id }); } catch {} } });
   host.appendChild(view);
+  try { chrome.storage.local.get(['L2R_IMAGELAB_ACTIVE_TAB'], v => { const want=v?.L2R_IMAGELAB_ACTIVE_TAB||'gen'; const bar=host.querySelector('.l2r-tabs'); const btn=Array.from(bar?.querySelectorAll('button')||[]).find(b => (b.textContent||'').toLowerCase().includes(want)); btn?.click(); }); } catch {}
   // live refresh when images update
   bus?.on?.('images:updated', () => { if (galleryRef) renderGallery(galleryRef, { bus }); });
 
   return wrap;
 }
+
+
+
 
 
 
