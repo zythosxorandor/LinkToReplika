@@ -1,8 +1,9 @@
-import { storage } from './storage.js';
+﻿import { storage } from './storage.js';
 
 export const KEYS = {
   OPENAI_KEY: 'OPENAI_KEY',
-  OPENAI_MODEL: 'OPENAI_MODEL',
+  
+  L2R_LLM_PROVIDER: 'L2R_LLM_PROVIDER',
   L2R_ENABLED: 'L2R_ENABLED',
   L2R_APPROVE: 'L2R_APPROVE',
   L2R_MAX_TURNS: 'L2R_MAX_TURNS',
@@ -41,7 +42,8 @@ const DEFAULT_IMAGE_OPTS = {
 
 const DEFAULTS = {
   [KEYS.OPENAI_KEY]: '',
-  [KEYS.OPENAI_MODEL]: 'gpt-4o-mini',
+  
+  [KEYS.L2R_LLM_PROVIDER]: 'openai',
   [KEYS.L2R_ENABLED]: false,
   [KEYS.L2R_APPROVE]: false,
   [KEYS.L2R_MAX_TURNS]: 2000,
@@ -59,7 +61,8 @@ export const MAX_IMAGES_SAVED = 9999;
 
 export const STATE = {
   openaiKey: '',
-  model: 'gpt-4o-mini',
+  
+  llmProvider: 'openai',
   enabled: false,
   approve: false,
   maxTurns: 2000,
@@ -116,7 +119,8 @@ export async function saveImagePrefs() {
 export async function initState() {
   const base = await storage.get(Object.keys(DEFAULTS));
   STATE.openaiKey = base[KEYS.OPENAI_KEY] ?? DEFAULTS[KEYS.OPENAI_KEY];
-  STATE.model = base[KEYS.OPENAI_MODEL] ?? DEFAULTS[KEYS.OPENAI_MODEL];
+  
+  STATE.llmProvider = base[KEYS.L2R_LLM_PROVIDER] ?? DEFAULTS[KEYS.L2R_LLM_PROVIDER];
   STATE.enabled = base[KEYS.L2R_ENABLED] ?? DEFAULTS[KEYS.L2R_ENABLED];
   STATE.approve = base[KEYS.L2R_APPROVE] ?? DEFAULTS[KEYS.L2R_APPROVE];
   STATE.maxTurns = base[KEYS.L2R_MAX_TURNS] ?? DEFAULTS[KEYS.L2R_MAX_TURNS];
@@ -142,3 +146,4 @@ export async function initState() {
   STATE.imgStyle = (imgBits[KEYS.IMG_STYLE] || DEFAULT_IMAGE_STYLE);
   STATE.imgOpts = { ...DEFAULT_IMAGE_OPTS, ...(imgBits[KEYS.IMG_OPTS] || {}) };
 }
+

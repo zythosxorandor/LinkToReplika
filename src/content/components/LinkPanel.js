@@ -121,17 +121,3 @@ export function installLinkPanel(bus) {
     // Small top-right toggle button (like chess / logs have theirs)
     addPanelToggle(rootHost);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

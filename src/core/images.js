@@ -1,4 +1,5 @@
 ﻿import { STATE, saveImages, saveImagePrefs } from './state.js';
+import { promptFromChatWithStyleLLM } from './llmClient.js';
 
 export function renderGallery(container, { bus }) {
   if (!container) return;
@@ -93,4 +94,6 @@ export async function updateImagePrefs({ imgStyle, opts }) {
   if (opts) STATE.imgOpts = { ...STATE.imgOpts, ...opts };
   await saveImagePrefs();
 }
+
+
 

@@ -1,5 +1,6 @@
 ﻿import { STATE, saveHistory } from '../core/state.js';
-import { chatComplete, REPLY_CHAR_LIMIT } from '../core/openai.js';
+import { REPLY_CHAR_LIMIT } from '../core/limits.js';
+import { chatCompleteLLM, setActiveProvider } from '../core/llmClient.js';
 import { injectReply } from '../core/replika-dom.js';
 import { storage } from '../core/storage.js';
 import { KEYS } from '../core/state.js';
@@ -9,17 +10,26 @@ export function LinkingTab({ bus }) {
   const wrap = document.createElement('section');
   wrap.innerHTML = `
     <div class="hrow">
-      <div>OpenAI: <span class="pill" id="l2rStatus">Idle</span></div>
+      <div>LLM: <span class="pill" id="l2rStatus">Idle</span></div>
       <br />
       <label class="toggle">
         <input type="checkbox" id="l2rEnabled" />
-        <span>Link OpenAI -> Replika</span>
+        <span>Link LLM -> Replika</span>
       </label>
       <br />
       <label class="toggle">
         <input type="checkbox" id="l2rApprove" />
         <span>Approve before sending</span>
       </label>
+      <br />
+      <label>LLM Provider</label>
+      <div class="row-inline">
+        <select id="l2rProvider">
+          <option value="openai">OpenAI</option>
+          <option value="gemini">Google Gemini</option>
+        </select>
+        <span class="small muted">Choose which client generates replies</span>
+      </div>
     </div>
 
     <div class="row">
@@ -42,10 +52,12 @@ export function LinkingTab({ bus }) {
   const statusEl = wrap.querySelector('#l2rStatus');
   const manualEl = wrap.querySelector('#l2rManual');
   const manualSendEl = wrap.querySelector('#l2rManualSend');
+  const providerSel = wrap.querySelector('#l2rProvider');
   const resetCtxBtn = wrap.querySelector('#l2rResetCtx');
 
   enabledEl.checked = STATE.enabled;
   approveEl.checked = STATE.approve;
+  if (providerSel) providerSel.value = (STATE.llmProvider || 'openai');
 
   enabledEl.addEventListener('change', async () => {
     STATE.enabled = enabledEl.checked;
@@ -55,6 +67,11 @@ export function LinkingTab({ bus }) {
   approveEl.addEventListener('change', async () => {
     STATE.approve = approveEl.checked;
     await storage.set({ [KEYS.L2R_APPROVE]: STATE.approve });
+  });
+
+  providerSel?.addEventListener('change', async () => {
+    await setActiveProvider(providerSel.value);
+    bus.emit('log', { tag: 'info', text: `Provider: ${STATE.llmProvider}` });
   });
 
   manualSendEl.addEventListener('click', async () => {
@@ -77,7 +94,10 @@ export function LinkingTab({ bus }) {
   bus.on('incoming', async () => {
     if (!STATE.enabled || STATE.busy) return;
     if (STATE.turns >= STATE.maxTurns) { bus.emit('log', { tag: 'info', text: 'Max turns reached.' }); return; }
-    if (!STATE.openaiKey) { bus.emit('log', { tag: 'error', text: 'No OpenAI key set.' }); return; }
+    // Ensure provider prerequisites
+    const prov = STATE.llmProvider || 'openai';
+    if (prov === 'openai' && !STATE.openaiKey) { bus.emit('log', { tag: 'error', text: 'No OpenAI key set.' }); return; }
+    if (prov === 'gemini' && !STATE.geminiKey) { bus.emit('log', { tag: 'error', text: 'No Gemini key set.' }); return; }
 
     STATE.busy = true; bus.emit('busy', true);
     try {
@@ -86,7 +106,7 @@ export function LinkingTab({ bus }) {
         ...sysList.map(text => ({ role: 'system', content: text })),
         ...STATE.history.slice(-16),
       ];
-      const reply = await chatComplete({ messages: msgs, temperature: 0.7, charLimit: REPLY_CHAR_LIMIT });
+      const reply = await chatCompleteLLM({ messages: msgs, temperature: 0.7, charLimit: REPLY_CHAR_LIMIT });
       STATE.history.push({ role: 'assistant', content: reply });
       STATE.turns += 1;
       await saveHistory();
@@ -120,3 +140,4 @@ export function LinkingTab({ bus }) {
 
   return wrap;
 }
+

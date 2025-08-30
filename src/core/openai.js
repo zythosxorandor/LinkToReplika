@@ -1,7 +1,7 @@
 ﻿/* eslint-disable no-unused-vars */
 import { STATE } from './state.js';
 
-export const REPLY_CHAR_LIMIT = 2048 * 10;
+const REPLY_CHAR_LIMIT = 2048 * 10;
 
 export function tokensForCharLimit(chars = REPLY_CHAR_LIMIT) {
   const approx = Math.floor(chars / 3.8); //// ≈ 526 for 2000 chars
@@ -98,5 +98,6 @@ export async function extractChessMove({ text, fen, side }) {
     return null;
   }
 }
+
 
 

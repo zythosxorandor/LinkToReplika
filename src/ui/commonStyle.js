@@ -13,6 +13,14 @@
   }
 
   /* Buttons */
+  .row-inline { flex-wrap: wrap; }
+  .row-inline > input,
+  .row-inline > select,
+  .row-inline > textarea,
+  .row-inline > .inp { flex: 1 1 100%; }
+  .row-inline > .btn { margin-top: 6px; }
+  label { font-size: 12px; color: var(--l2r-muted); }
+  h3 { margin: 4px 0 8px; font-size: 14px; }
   .l2r-btn, .btn, .l2r-tab {
     font: 12px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     padding: 6px 10px; border-radius: 999px; border: 1px solid var(--l2r-border);
@@ -23,6 +31,14 @@
   .btn.mini, .l2r-btn.mini, .l2r-tab.mini { padding: 3px 8px; font-size: 11px; }
 
   /* Inputs */
+  .row-inline { flex-wrap: wrap; }
+  .row-inline > input,
+  .row-inline > select,
+  .row-inline > textarea,
+  .row-inline > .inp { flex: 1 1 100%; }
+  .row-inline > .btn { margin-top: 6px; }
+  label { font-size: 12px; color: var(--l2r-muted); }
+  h3 { margin: 4px 0 8px; font-size: 14px; }
   input, select, textarea {
     font: 12px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
     background: var(--l2r-bg-soft);
@@ -30,11 +46,21 @@
     border: 1px solid var(--l2r-border);
     border-radius: var(--l2r-radius);
     padding: 7px 8px;
+    width: 100%;
+    display: block;
   }
   input::placeholder, textarea::placeholder { color: #64748b; }
   input:focus, select:focus, textarea:focus { outline: 1px solid var(--l2r-accent); border-color: var(--l2r-accent); }
 
   /* Layout */
+  .row-inline { flex-wrap: wrap; }
+  .row-inline > input,
+  .row-inline > select,
+  .row-inline > textarea,
+  .row-inline > .inp { flex: 1 1 100%; }
+  .row-inline > .btn { margin-top: 6px; }
+  label { font-size: 12px; color: var(--l2r-muted); }
+  h3 { margin: 4px 0 8px; font-size: 14px; }
   .row { display: grid; gap: 6px; }
   .row-inline { display: flex; gap: 8px; align-items: center; }
   .hrow { display: flex; gap: 8px; align-items: center; }
@@ -43,6 +69,14 @@
   .l2r-grid { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
   /* Log-like text area styling (re-usable) */
+  .row-inline { flex-wrap: wrap; }
+  .row-inline > input,
+  .row-inline > select,
+  .row-inline > textarea,
+  .row-inline > .inp { flex: 1 1 100%; }
+  .row-inline > .btn { margin-top: 6px; }
+  label { font-size: 12px; color: var(--l2r-muted); }
+  h3 { margin: 4px 0 8px; font-size: 14px; }
   .log {
     background: var(--l2r-bg-soft);
     border: 1px dashed var(--l2r-border);
@@ -62,3 +96,4 @@ export function injectCommonStyle(doc = document) {
   css.textContent = COMMON_STYLE;
   doc.documentElement.appendChild(css);
 }
+

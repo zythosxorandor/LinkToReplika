@@ -1,100 +1,135 @@
 ﻿import { STATE, saveImages } from '../core/state.js';
-import { promptFromChatWithStyle } from '../core/openai.js';
+import { promptFromChatWithStyleLLM } from '../core/llmClient.js';
 import { generateImageAndShow, renderGallery, updateImagePrefs } from '../core/images.js';
+import { NavTabs } from '../ui/NavTabs.js';
 
 export function ImageLabTab({ bus }) {
   const wrap = document.createElement('section');
   wrap.innerHTML = `
     <h3>Image Lab</h3>
-
-    <label>Style recipe</label><br />
-    <textarea id="l2rImgStyle" class="inp" placeholder="How to stylize prompts..." rows="5"></textarea>
-
-    <div class="l2r-grid">
-      <div>
-        <label>Aspect</label>
-        <select id="l2rImgAspect" class="inp">
-          <option value="1024x1024">Square (1024×1024)</option>
-          <option value="1792x1024">Landscape (1792×1024)</option>
-          <option value="1024x1792">Portrait (1024×1792)</option>
-        </select>
-      </div>
-      <div>
-        <label>Quality</label>
-        <select id="l2rImgQuality" class="inp">
-          <option value="standard">standard</option>
-          <option value="hd">hd</option>
-        </select>
-      </div>
-      <div>
-        <label>Style</label><br />
-        <select id="l2rImgStyleMode" class="inp">
-          <option value="vivid">vivid</option>
-          <option value="natural">natural</option>
-        </select>
-      </div>
-      <div>
-        <label>Custom model</label>
-        <input id="l2rImgModel" class="inp" placeholder="dall-e-3" disabled />
-      </div>
-    </div>
-
-    <div class="l2r-row" style="margin-top:8px;">
-      <button id="l2rGenFromChat" class="btn">Generate from recent chat</button>
-    </div>
-    <input id="l2rImgPrompt" class="inp" placeholder="(Optional) custom image prompt..." />
-
-    <div class="l2r-row" style="justify-content: flex-end; margin-top:6px;">
-      <button id="l2rClearImages" class="btn mini">Clear gallery</button>
-    </div>
-
-    <div id="l2rGallery" class="l2r-gallery"></div>
+    <div id="l2rImgTabs"></div>
   `;
 
-  const imgStyleEl = wrap.querySelector('#l2rImgStyle');
-  const imgAspect = wrap.querySelector('#l2rImgAspect');
-  const imgQuality = wrap.querySelector('#l2rImgQuality');
-  const imgStyleMod = wrap.querySelector('#l2rImgStyleMode');
-  const imgModel = wrap.querySelector('#l2rImgModel');
-  const imgFromChat = wrap.querySelector('#l2rGenFromChat');
-  const imgPrompt = wrap.querySelector('#l2rImgPrompt');
-  const imgClear = wrap.querySelector('#l2rClearImages');
-  const gallery = wrap.querySelector('#l2rGallery');
+  const host = wrap.querySelector('#l2rImgTabs');
+  let galleryRef = null;
 
-  imgStyleEl.value = STATE.imgStyle;
-  imgAspect.value = STATE.imgOpts.size;
-  imgQuality.value = STATE.imgOpts.quality;
-  imgStyleMod.value = STATE.imgOpts.style;
-  imgModel.value = STATE.imgOpts.model;
+  function GenTab() {
+    const s = document.createElement('section');
+    s.innerHTML = `
+    <div class="l2r-row" style="margin-top:8px;">
+        <button id="l2rGenFromChat" class="btn">Build prompt from recent chat</button>
+      </div>
+      <input id="l2rImgPrompt" class="inp" placeholder="(Optional) custom image prompt..." />
+      <div class="l2r-row" style="justify-content: flex-end; margin-top:6px;">
+        <button id="l2rGenNow" class="btn">Generate</button>
+      </div>`;
+    const genBtn = s.querySelector('#l2rGenFromChat');
+    const genNow = s.querySelector('#l2rGenNow');
+    const imgPrompt = s.querySelector('#l2rImgPrompt');
+    genBtn.addEventListener('click', async () => {
+      try {
+        bus.emit('log', { tag: 'info', text: 'Building image prompt from recent chat...' });
+        const prompt = await promptFromChatWithStyleLLM();
+        if (!prompt) { bus.emit('log', { tag: 'warn', text: 'Prompt came back empty.' }); return; }
+        imgPrompt.value = prompt;
+      } catch (e) { bus.emit('log', { tag: 'error', text: String(e) }); }
+    });
+    genNow.addEventListener('click', async () => {
+      const prompt = (imgPrompt.value || '').trim();
+      if (!prompt) { bus.emit('log', { tag: 'warn', text: 'Enter or build a prompt first.' }); return; }
+      await generateImageAndShow({ prompt, bus, galleryEl: galleryRef });
+    });
+    return s;
+  }
 
-  imgStyleEl.addEventListener('change', () => updateImagePrefs({ imgStyle: imgStyleEl.value }));
-  imgAspect.addEventListener('change', () => updateImagePrefs({ opts: { size: imgAspect.value } }));
-  imgQuality.addEventListener('change', () => updateImagePrefs({ opts: { quality: imgQuality.value } }));
-  imgStyleMod.addEventListener('change', () => updateImagePrefs({ opts: { style: imgStyleMod.value } }));
-  imgModel.addEventListener('change', () => updateImagePrefs({ opts: { model: (imgModel.value || 'dall-e-3').trim() } }));
+  function StylesTab() {
+    const s = document.createElement('section');
+    s.innerHTML = `
+    <label>Style recipe</label><br />
+      <textarea id="l2rImgStyle" class="inp" placeholder="How to stylize prompts..." rows="5"></textarea>
+      <div class="l2r-grid">
+        <div>
+          <label>Aspect</label>
+          <select id="l2rImgAspect" class="inp">
+            <option value="1024x1024">Square (1024x1024)</option>
+            <option value="1792x1024">Landscape (1792x1022)</option>
+            <option value="1024x1792">Portrait (1024x1792)</option>
+          </select>
+        </div>
+        <div>
+          <label>Quality</label>
+          <select id="l2rImgQuality" class="inp">
+            <option value="standard">standard</option>
+            <option value="hd">hd</option>
+          </select>
+        </div>
+        <div>
+          <label>Style</label><br />
+          <select id="l2rImgStyleMode" class="inp">
+            <option value="vivid">vivid</option>
+            <option value="natural">natural</option>
+          </select>
+        </div>
+        <div>
+          <label>Custom model</label>
+          <input id="l2rImgModel" class="inp" placeholder="dall-e-3" />
+        </div>
+      </div>`;
+    const imgStyleEl = s.querySelector('#l2rImgStyle');
+    const imgAspect = s.querySelector('#l2rImgAspect');
+    const imgQuality = s.querySelector('#l2rImgQuality');
+    const imgStyleMod = s.querySelector('#l2rImgStyleMode');
+    const imgModel = s.querySelector('#l2rImgModel');
+    imgStyleEl.value = STATE.imgStyle;
+    imgAspect.value = STATE.imgOpts.size;
+    imgQuality.value = STATE.imgOpts.quality;
+    imgStyleMod.value = STATE.imgOpts.style;
+    imgModel.value = STATE.imgOpts.model;
+    imgStyleEl.addEventListener('change', () => updateImagePrefs({ imgStyle: imgStyleEl.value }));
+    imgAspect.addEventListener('change', () => updateImagePrefs({ opts: { size: imgAspect.value } }));
+    imgQuality.addEventListener('change', () => updateImagePrefs({ opts: { quality: imgQuality.value } }));
+    imgStyleMod.addEventListener('change', () => updateImagePrefs({ opts: { style: imgStyleMod.value } }));
+    imgModel.addEventListener('change', () => updateImagePrefs({ opts: { model: (imgModel.value || 'dall-e-3').trim() } }));
+    return s;
+  }
 
-  const genImage = async () => {
-    try {
-      bus.emit('log', { tag: 'info', text: 'Building image prompt from recent chat...' });
-      const prompt = await promptFromChatWithStyle();
-      if (!prompt) { bus.emit('log', { tag: 'warn', text: 'Prompt came back empty.' }); return; }
-      imgPrompt.value = prompt;
-      await generateImageAndShow({ prompt, bus, galleryEl: gallery });
-    } catch (e) {
-      bus.emit('log', { tag: 'error', text: String(e) });
-    }
-  };
-
-  imgFromChat.addEventListener('click', genImage);
-
-  imgClear.addEventListener('click', async () => {
-    STATE.images = [];
-    await saveImages();
+  function GalleryTab() {
+    const s = document.createElement('section');
+    s.innerHTML = `
+    <div class="l2r-row" style="justify-content: flex-end; margin-top:6px;">
+        <button id="l2rRefreshGallery" class="btn mini">Refresh</button> <button id="l2rClearImages" class="btn mini">Clear gallery</button>
+      </div>
+      <div id="l2rGallery" class="l2r-gallery"></div>`;
+    const imgRefresh = s.querySelector('#l2rRefreshGallery');
+    const imgClear = s.querySelector('#l2rClearImages');
+    const gallery = s.querySelector('#l2rGallery');
+    galleryRef = gallery;
+    imgRefresh.addEventListener('click', () => renderGallery(gallery, { bus }));
+    imgClear.addEventListener('click', async () => {
+      STATE.images = [];
+      await saveImages();
+      renderGallery(gallery, { bus });
+      bus.emit('log', { tag: 'info', text: 'Image gallery cleared.' });
+    });
     renderGallery(gallery, { bus });
-    bus.emit('log', { tag: 'info', text: 'Image gallery cleared.' });
-  });
+    return s;
+  }
 
-  renderGallery(gallery, { bus });
+  const tabs = [
+    { id: 'gen', title: 'Generate', render: () => GenTab() },
+    { id: 'styles', title: 'Styles', render: () => StylesTab() },
+    { id: 'gallery', title: 'Gallery', render: () => GalleryTab() },
+  ];
+  const view = NavTabs({ tabs, activeId: 'gen' });
+  host.appendChild(view);
+  // live refresh when images update
+  bus?.on?.('images:updated', () => { if (galleryRef) renderGallery(galleryRef, { bus }); });
+
   return wrap;
 }
+
+
+
+
+
 
