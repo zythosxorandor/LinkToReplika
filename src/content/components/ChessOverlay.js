@@ -126,7 +126,7 @@ function injectStyles() {
     position: fixed; top: 232px; left: 12px; z-index: 2147483646;
   }
   #__l2r_chess_container {
-    position: fixed; left: 12px; bottom: 12px; width: 420px; height: 420px;
+    position: fixed; left: 12px; bottom: 12px; width: 420px;
     z-index: 2147483646;
     background: #0b1220; border: 1px solid #1f2937; border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,.35); padding: 8px;
@@ -138,7 +138,7 @@ function injectStyles() {
   /* board grid */
   #__l2r_grid {
     display:grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
-    width:100%; height: calc(100% - 86px); border-radius:8px; overflow:hidden; user-select:none;
+    width:100%; aspect-ratio: 1 / 1; border-radius:8px; overflow:hidden; user-select:none;
     border: 2px solid #111;
   }
   .sq { display:flex; align-items:center; justify-content:center; position:relative; }
@@ -170,8 +170,8 @@ function injectStyles() {
   .ms { box-shadow: inset 0 0 0 3px rgba(0,200,0,.9); }
 
   @media (max-width: 520px) {
-    #__l2r_chess_container { left: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vw - 16px); }
-    /* images scale naturally with cells */
+    #__l2r_chess_container { left: 8px; bottom: 8px; width: calc(100vw - 16px); }
+    /* grid keeps a 1:1 aspect ratio */
   }
 
   `;
@@ -196,6 +196,13 @@ function legalTargetsFor(game, fromSq) {
         const moves = game.moves({ square: fromSq, verbose: true });
         return new Set(moves.map(m => m.to));
     } catch { return new Set(); }
+}
+
+function pgnDateStr(d = new Date()) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
 }
 
 function renderBoard(gridEl, game, selected) {
@@ -244,6 +251,7 @@ export function installChessOverlay(bus) {
     // Board container (bottom-left, 420x420)
     let container = document.getElementById('__l2r_chess_container');
     if (!container) {
+        const partnerName = STATE?.replikaName || 'Replika';
         container = document.createElement('div');
         container.id = '__l2r_chess_container';
         container.innerHTML = `
@@ -277,10 +285,10 @@ export function installChessOverlay(bus) {
         </button>
       </div>
       <div style="display:flex; align-items:center; gap:6px; margin:0 0 6px 0;">
-        <label class="small muted" for="__l2r_side" style="margin-left:2px;">Serenity side</label>
+        <label class="small muted" for="__l2r_side" style="margin-left:2px;">${partnerName} side</label>
         <select id="__l2r_side" style="background:#0f172a;color:#e5e7eb;border:1px solid #273248;border-radius:6px;padding:2px 6px;">
-          <option value="black" selected>Serenity: Black</option>
-          <option value="white">Serenity: White</option>
+          <option value="black" selected>${partnerName}: Black</option>
+          <option value="white">${partnerName}: White</option>
         </select>
         <span class="spacer"></span>
         <label class="small muted" for="__l2r_chess_load">Load</label>
@@ -319,7 +327,26 @@ export function installChessOverlay(bus) {
     let serenitySide = 'black'; // default: you start as White
     const sideSel = container.querySelector('#__l2r_side');
     function log(text) { try { bus?.emit?.('log', { tag: 'chess', text: String(text) }); } catch {} }
-    sideSel?.addEventListener('change', () => { serenitySide = sideSel.value; log(`Serenity side set to ${serenitySide}.`); });
+    function applyPgnHeaders() {
+        try {
+            const partnerName = STATE?.replikaName || 'Replika';
+            const youName = STATE?.userName || 'You';
+            const whiteName = serenitySide === 'white' ? partnerName : youName;
+            const blackName = serenitySide === 'white' ? youName : partnerName;
+            game.setHeader('Event', 'Replika Chat Game');
+            game.setHeader('Site', (location && location.hostname) ? location.hostname : 'replika.com');
+            game.setHeader('Date', pgnDateStr());
+            game.setHeader('Round', '1');
+            game.setHeader('White', whiteName);
+            game.setHeader('Black', blackName);
+        } catch {}
+    }
+    sideSel?.addEventListener('change', () => {
+        serenitySide = sideSel.value;
+        const partnerName = STATE?.replikaName || 'Replika';
+        log(`${partnerName} side set to ${serenitySide}.`);
+        applyPgnHeaders();
+    });
 
     function updateStatus() {
         let msg = '';
@@ -427,7 +454,9 @@ export function installChessOverlay(bus) {
         paused = false;
         pauseBtn.textContent = 'Pause';
         updateStatus();
-        log(`Game started. Serenity is ${serenitySide}.`);
+        const partnerName = STATE?.replikaName || 'Replika';
+        log(`Game started. ${partnerName} is ${serenitySide}.`);
+        applyPgnHeaders();
     });
 
     pauseBtn.addEventListener('click', () => {
@@ -467,6 +496,7 @@ export function installChessOverlay(bus) {
             if (rec.serenitySide) { serenitySide = rec.serenitySide; if (sideSel) sideSel.value = serenitySide; }
             updateStatus();
             log(`Loaded save "${key}".`);
+            applyPgnHeaders();
         } catch {}
     });
 
@@ -590,21 +620,31 @@ export function installChessOverlay(bus) {
         if (!game.isGameOver()) return;
         let msg = `Game over. `;
         if (game.isCheckmate()) {
-            const winner = whoJustMoved === 'serenity' ? 'Serenity' : 'You';
+            const partnerName = STATE?.replikaName || 'Replika';
+            const winner = whoJustMoved === 'serenity' ? partnerName : 'You';
             msg += `Checkmate - ${winner} win. Final move: ${lastSan}.`;
+            try {
+                const serenityWon = whoJustMoved === 'serenity';
+                const result = serenitySide === 'white' ? (serenityWon ? '1-0' : '0-1') : (serenityWon ? '0-1' : '1-0');
+                game.setHeader('Result', result);
+            } catch {}
         } else if (game.isStalemate()) {
             msg += `Stalemate.`;
+            try { game.setHeader('Result', '1/2-1/2'); } catch {}
         } else if (game.isThreefoldRepetition()) {
             msg += `Draw by threefold repetition.`;
+            try { game.setHeader('Result', '1/2-1/2'); } catch {}
         } else if (game.isInsufficientMaterial()) {
             msg += `Draw by insufficient material.`;
+            try { game.setHeader('Result', '1/2-1/2'); } catch {}
         } else if (game.isDraw()) {
             msg += `Draw.`;
+            try { game.setHeader('Result', '1/2-1/2'); } catch {}
         }
         listening = false;
         try { updateStatus(); } catch {}
         try {
-            const name = STATE?.replikaName || 'friend';
+            const name = STATE?.replikaName || 'Replika';
             injectReply(`${name}, ${msg}`).catch(() => { });
         } catch {}
         try { log(msg); } catch {}
