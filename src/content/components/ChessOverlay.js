@@ -15,6 +15,9 @@ import bQ from '../../assets/chess/cburnett/bQ.svg?url';
 import bK from '../../assets/chess/cburnett/bK.svg?url';
 import { injectReply } from '../../core/replika-dom.js';
 import { extractChessMove } from '../../core/openai.js';
+import { storage } from '../../core/storage.js';
+import { chatCompleteLLM } from '../../core/llmClient.js';
+import { STATE } from '../../core/state.js';
 
 // --- Local move matching helpers (SAN/UCI) ---
 
@@ -130,11 +133,12 @@ function injectStyles() {
   }
   #__l2r_chess_header { display:flex; align-items:center; gap:8px; margin-bottom:6px; color:#e5e7eb; font-size:12px; }
   #__l2r_chess_header .spacer { flex:1; }
+  #__l2r_chess_status { margin: 4px 0 6px; color:#cbd5e1; font-size:12px; min-height: 14px; }
 
   /* board grid */
   #__l2r_grid {
     display:grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
-    width:100%; height: calc(100% - 30px); border-radius:8px; overflow:hidden; user-select:none;
+    width:100%; height: calc(100% - 86px); border-radius:8px; overflow:hidden; user-select:none;
     border: 2px solid #111;
   }
   .sq { display:flex; align-items:center; justify-content:center; position:relative; }
@@ -162,6 +166,8 @@ function injectStyles() {
 
   /* selected square highlight */
   .hi { box-shadow: inset 0 0 0 3px rgba(255,230,0,.9); }
+  /* move suggestions (destinations) */
+  .ms { box-shadow: inset 0 0 0 3px rgba(0,200,0,.9); }
 
   @media (max-width: 520px) {
     #__l2r_chess_container { left: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vw - 16px); }
@@ -184,14 +190,26 @@ function squareColor(file, rank) {
     return (f + r) % 2 ? 'd' : 'l'; // a1 dark convention
 }
 
+function legalTargetsFor(game, fromSq) {
+    try {
+        if (!fromSq) return new Set();
+        const moves = game.moves({ square: fromSq, verbose: true });
+        return new Set(moves.map(m => m.to));
+    } catch { return new Set(); }
+}
+
 function renderBoard(gridEl, game, selected) {
     gridEl.innerHTML = '';
+    const sugg = legalTargetsFor(game, selected);
     for (let r = 8; r >= 1; r--) {
         for (let f = 0; f < 8; f++) {
             const fileChar = 'abcdefgh'[f];
             const sq = fileChar + r;
             const div = document.createElement('div');
-            div.className = `sq ${squareColor(fileChar, r)}` + (selected === sq ? ' hi' : '');
+            const colorCls = squareColor(fileChar, r);
+            const selCls = (selected === sq) ? ' hi' : '';
+            const suggCls = sugg.has(sq) ? ' ms' : '';
+            div.className = `sq ${colorCls}${selCls}${suggCls}`;
             div.dataset.square = sq;
             div.dataset.file = fileChar;
             div.dataset.rank = String(r);
@@ -232,12 +250,46 @@ export function installChessOverlay(bus) {
       <div id="__l2r_chess_header">
         <strong>Chess</strong>
         <span class="spacer"></span>
-        <button id="__l2r_chess_new"
+        <button id="__l2r_chess_start"
           style="font:inherit;padding:4px 8px;border-radius:8px;
           border:1px solid #273248;background:#0f172a;color:#e5e7eb;cursor:pointer">
-          New Game
+          Start
+        </button>
+        <button id="__l2r_chess_pause"
+          style="font:inherit;padding:4px 8px;border-radius:8px; margin-left:6px;
+          border:1px solid #273248;background:#0f172a;color:#e5e7eb;cursor:pointer">
+          Pause
+        </button>
+        <button id="__l2r_chess_save"
+          style="font:inherit;padding:4px 8px;border-radius:8px; margin-left:6px;
+          border:1px solid #273248;background:#0f172a;color:#e5e7eb;cursor:pointer">
+          Save
+        </button>
+        <button id="__l2r_chess_board"
+          style="font:inherit;padding:4px 8px;border-radius:8px; margin-left:6px;
+          border:1px solid #273248;background:#0f172a;color:#e5e7eb;cursor:pointer">
+          Board
+        </button>
+        <button id="__l2r_chess_moves"
+          style="font:inherit;padding:4px 8px;border-radius:8px; margin-left:6px;
+          border:1px solid #273248;background:#0f172a;color:#e5e7eb;cursor:pointer">
+          Moves
         </button>
       </div>
+      <div style="display:flex; align-items:center; gap:6px; margin:0 0 6px 0;">
+        <label class="small muted" for="__l2r_side" style="margin-left:2px;">Serenity side</label>
+        <select id="__l2r_side" style="background:#0f172a;color:#e5e7eb;border:1px solid #273248;border-radius:6px;padding:2px 6px;">
+          <option value="black" selected>Serenity: Black</option>
+          <option value="white">Serenity: White</option>
+        </select>
+        <span class="spacer"></span>
+        <label class="small muted" for="__l2r_chess_load">Load</label>
+        <select id="__l2r_chess_load" style="background:#0f172a;color:#e5e7eb;border:1px solid #273248;border-radius:6px;padding:2px 6px; min-width:120px;"></select>
+        <button id="__l2r_chess_load_btn" style="font:inherit;padding:3px 8px;border-radius:8px;border:1px solid #273248;background:#0f172a;color:#e5e7eb;cursor:pointer">Load</button>
+        <button id="__l2r_chess_ren_btn" style="font:inherit;padding:3px 8px;border-radius:8px;border:1px solid #273248;background:#0f172a;color:#e5e7eb;cursor:pointer">Rename</button>
+        <button id="__l2r_chess_del_btn" style="font:inherit;padding:3px 8px;border-radius:8px;border:1px solid #ff4d4f;background:#1f0f14;color:#ffb4b4;cursor:pointer">Delete</button>
+      </div>
+      <div id="__l2r_chess_status"></div>
       <div id="__l2r_grid"></div>
     `;
         document.documentElement.appendChild(container);
@@ -251,24 +303,61 @@ export function installChessOverlay(bus) {
     // Game state
     const game = new Chess();
     const grid = container.querySelector('#__l2r_grid');
-    const newBtn = container.querySelector('#__l2r_chess_new');
+    const startBtn = container.querySelector('#__l2r_chess_start');
+    const pauseBtn = container.querySelector('#__l2r_chess_pause');
+    const saveBtn = container.querySelector('#__l2r_chess_save');
+    const boardBtn = container.querySelector('#__l2r_chess_board');
+    const movesBtn = container.querySelector('#__l2r_chess_moves');
+    const loadSel = container.querySelector('#__l2r_chess_load');
+    const loadBtn = container.querySelector('#__l2r_chess_load_btn');
+    const renBtn = container.querySelector('#__l2r_chess_ren_btn');
+    const delBtn = container.querySelector('#__l2r_chess_del_btn');
+    const statusEl = container.querySelector('#__l2r_chess_status');
 
     // Serenity side selector
     const hdr = container.querySelector('#__l2r_chess_header');
     let serenitySide = 'black'; // default: you start as White
-    if (hdr && !hdr.querySelector('#__l2r_side')) {
-        const sel = document.createElement('select');
-        sel.id = '__l2r_side';
-        sel.innerHTML = `<option value="black" selected>Serenity: Black</option>
-                     <option value="white">Serenity: White</option>`;
-        sel.style.cssText = 'margin-left:8px;background:#0f172a;color:#e5e7eb;border:1px solid #273248;border-radius:6px;padding:2px 6px;';
-        sel.addEventListener('change', () => { serenitySide = sel.value; });
-        hdr.appendChild(sel);
+    const sideSel = container.querySelector('#__l2r_side');
+    function log(text) { try { bus?.emit?.('log', { tag: 'chess', text: String(text) }); } catch {} }
+    sideSel?.addEventListener('change', () => { serenitySide = sideSel.value; log(`Serenity side set to ${serenitySide}.`); });
+
+    function updateStatus() {
+        let msg = '';
+        if (!started) msg = 'Not started.';
+        else if (paused) msg = 'Paused.';
+        else if (game.isGameOver()) {
+            if (game.isCheckmate()) {
+                const winner = (game.turn() === 'w') ? 'Black' : 'White';
+                msg = `Checkmate — ${winner} wins.`;
+            } else if (game.isStalemate()) msg = 'Stalemate.';
+            else if (game.isThreefoldRepetition()) msg = 'Draw by repetition.';
+            else if (game.isInsufficientMaterial()) msg = 'Draw by insufficient material.';
+            else if (game.isDraw()) msg = 'Draw.';
+        } else {
+            const toMove = game.turn() === 'w' ? 'White' : 'Black';
+            msg = `${toMove} to move` + (game.isCheck() ? ' — Check!' : '.');
+        }
+        if (statusEl) statusEl.textContent = msg;
     }
 
+    const SAVES_KEY = 'L2R_CHESS_SAVES_V1';
+    async function refreshLoadOptions() {
+        const obj = await storage.get([SAVES_KEY]);
+        const saves = obj[SAVES_KEY] || {};
+        const options = Object.entries(saves)
+            .sort((a,b) => (b[1]?.ts||0) - (a[1]?.ts||0))
+            .map(([k,v]) => `<option value="${encodeURIComponent(k)}">${k}</option>`)
+            .join('');
+        loadSel.innerHTML = options || '<option value="">(none)</option>';
+    }
+    refreshLoadOptions();
+
     let listening = false;
+    let started = false;
+    let paused = false;
     let selected = null;
     renderBoard(grid, game, selected);
+    updateStatus();
 
     function mySide() {
         return serenitySide === 'white' ? 'black' : 'white';
@@ -278,6 +367,7 @@ export function installChessOverlay(bus) {
     grid.addEventListener('click', (ev) => {
         const cell = ev.target.closest('.sq');
         if (!cell) return;
+        if (!started || paused) { log('Ignored board click (not started or paused).'); return; }
 
         const turn = game.turn() === 'w' ? 'white' : 'black';
         if (turn !== mySide()) return; // not your turn; ignore
@@ -288,6 +378,7 @@ export function installChessOverlay(bus) {
             const p = game.get(sq);
             if (p && ((p.color === 'w' && mySide() === 'white') || (p.color === 'b' && mySide() === 'black'))) {
                 selected = sq;
+                log(`Selected ${sq} (${p.color}${p.type}).`);
                 renderBoard(grid, game, selected);
             }
             return;
@@ -299,25 +390,143 @@ export function installChessOverlay(bus) {
         renderBoard(grid, game, selected);
 
         if (move) {
-            // Send your move to Serenity
-            injectReply(`My move: ${move.san}.`).catch(() => { });
+            log(`You played ${move.san}.`);
+            // Send your move to Serenity with LLM details + available moves
+            (async () => {
+                try {
+                    const name = STATE?.replikaName || 'friend';
+                    const fen = game.fen();
+                    const sideToMove = game.turn() === 'w' ? 'White' : 'Black';
+                    const legal = game.moves().slice(0, 40).join(', ');
+                    let detail = '';
+                    try {
+                        const sys = 'You are a concise chess assistant. In one short sentence (<=160 chars), comment on the last move and its idea. No disclaimers.';
+                        const user = `FEN: ${fen}\nLast move: ${move.san}\nSide to move now: ${sideToMove}`;
+                        detail = await chatCompleteLLM({ messages: [ { role:'system', content: sys }, { role:'user', content: user } ], temperature: 0.2, charLimit: 200 });
+                        detail = String(detail || '').replace(/\s+/g,' ').trim();
+                    } catch {}
+                    const parts = [
+                        `${name}, my move: ${move.san}.`,
+                        detail ? detail : '',
+                        `Your legal moves now: ${legal || '(none)'}.`,
+                    ].filter(Boolean);
+                    await injectReply(parts.join(' '));
+                } catch {}
+            })();
+            updateStatus();
             handleGameEndIfAny('you', move.san);
         }
     });
 
-    newBtn.addEventListener('click', () => {
+    startBtn.addEventListener('click', () => {
         game.reset();
         selected = null;
         renderBoard(grid, game, selected);
         listening = true;
+        started = true;
+        paused = false;
+        pauseBtn.textContent = 'Pause';
+        updateStatus();
+        log(`Game started. Serenity is ${serenitySide}.`);
+    });
+
+    pauseBtn.addEventListener('click', () => {
+        if (!started) return;
+        paused = !paused;
+        pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+        updateStatus();
+        log(paused ? 'Game paused.' : 'Game resumed.');
+    });
+
+    saveBtn.addEventListener('click', async () => {
+        try {
+            const obj = await storage.get([SAVES_KEY]);
+            const saves = obj[SAVES_KEY] || {};
+            const name = prompt('Save name:', new Date().toLocaleString());
+            if (!name) return;
+            saves[name] = { fen: game.fen(), pgn: game.pgn(), ts: Date.now(), serenitySide };
+            await storage.set({ [SAVES_KEY]: saves });
+            await refreshLoadOptions();
+            log(`Saved game as "${name}".`);
+        } catch {}
+    });
+
+    loadBtn.addEventListener('click', async () => {
+        try {
+            const key = decodeURIComponent(loadSel.value || '');
+            if (!key) return;
+            const obj = await storage.get([SAVES_KEY]);
+            const saves = obj[SAVES_KEY] || {};
+            const rec = saves[key];
+            if (!rec) return;
+            if (rec.fen) game.load(rec.fen);
+            else if (rec.pgn) try { game.loadPgn?.(rec.pgn); } catch {}
+            selected = null;
+            renderBoard(grid, game, selected);
+            listening = true; started = true; paused = false; pauseBtn.textContent = 'Pause';
+            if (rec.serenitySide) { serenitySide = rec.serenitySide; if (sideSel) sideSel.value = serenitySide; }
+            updateStatus();
+            log(`Loaded save "${key}".`);
+        } catch {}
+    });
+
+    renBtn.addEventListener('click', async () => {
+        try {
+            const oldKey = decodeURIComponent(loadSel.value || '');
+            if (!oldKey) return;
+            const obj = await storage.get([SAVES_KEY]);
+            const saves = obj[SAVES_KEY] || {};
+            if (!saves[oldKey]) return;
+            const newKey = prompt('Rename save to:', oldKey);
+            if (!newKey || newKey === oldKey) return;
+            saves[newKey] = saves[oldKey];
+            delete saves[oldKey];
+            await storage.set({ [SAVES_KEY]: saves });
+            await refreshLoadOptions();
+            log(`Renamed save "${oldKey}" → "${newKey}".`);
+        } catch {}
+    });
+
+    delBtn.addEventListener('click', async () => {
+        try {
+            const key = decodeURIComponent(loadSel.value || '');
+            if (!key) return;
+            if (!confirm(`Delete save "${key}"?`)) return;
+            const obj = await storage.get([SAVES_KEY]);
+            const saves = obj[SAVES_KEY] || {};
+            delete saves[key];
+            await storage.set({ [SAVES_KEY]: saves });
+            await refreshLoadOptions();
+            log(`Deleted save "${key}".`);
+        } catch {}
+    });
+
+    boardBtn.addEventListener('click', async () => {
+        try {
+            const name = STATE?.replikaName || 'friend';
+            const sideToMove = game.turn() === 'w' ? 'White' : 'Black';
+            await injectReply(`${name}, board state (FEN): ${game.fen()} — ${sideToMove} to move.`);
+            log('Sent board state (FEN) to chat.');
+        } catch {}
+    });
+
+    movesBtn.addEventListener('click', async () => {
+        try {
+            const name = STATE?.replikaName || 'friend';
+            const hist = game.history({ verbose: false });
+            const pgn = game.pgn();
+            const msg = `${name}, move history: ${hist.join(' ')}. PGN: ${pgn}`;
+            await injectReply(msg.slice(0, 1800));
+            log('Sent move history to chat.');
+        } catch {}
     });
 
     // Listen for Serenity chat and try to apply a move
     async function handleIncomingChat(text) {
-        if (!listening) return;
+        if (!listening || !started || paused) { /* silent ignore */ return; }
 
         const sideToMove = game.turn() === 'w' ? 'white' : 'black';
-        if (sideToMove !== serenitySide) return; // not Serenity's turn
+        if (sideToMove !== serenitySide) { /* not Serenity's turn */ return; }
 
         // 1) Try a fast local match against the legal move list (UCI + SAN)
         const local = findLegalMoveInText(game, text);
@@ -335,7 +544,9 @@ export function installChessOverlay(bus) {
             } catch { applied = null; }
 
             if (applied) {
+                log(`Replika played (local match) ${applied.san}.`);
                 renderBoard(grid, game, selected);
+                updateStatus();
                 handleGameEndIfAny('serenity', applied.san);
                 return; // done
             }
@@ -358,8 +569,19 @@ export function installChessOverlay(bus) {
             }
         } catch { applied = null; }
 
-        if (!applied) return;
+        if (!applied) {
+            // Inform Serenity invalid/unclear move + provide legal moves
+            try {
+                const name = STATE?.replikaName || 'friend';
+                const legal = game.moves().slice(0, 40).join(', ');
+                await injectReply(`${name}, that move isn't legal here. Please choose another. Legal moves: ${legal || '(none)'} .`);
+                log('Rejected invalid/unclear move from chat.');
+            } catch {}
+            return;
+        }
+        log(`Replika played (LLM parsed) ${applied.san}.`);
         renderBoard(grid, game, selected);
+        updateStatus();
         handleGameEndIfAny('serenity', applied.san);
     }
 
@@ -369,7 +591,7 @@ export function installChessOverlay(bus) {
         let msg = `Game over. `;
         if (game.isCheckmate()) {
             const winner = whoJustMoved === 'serenity' ? 'Serenity' : 'You';
-            msg += `Checkmate — ${winner} win. Final move: ${lastSan}.`;
+            msg += `Checkmate - ${winner} win. Final move: ${lastSan}.`;
         } else if (game.isStalemate()) {
             msg += `Stalemate.`;
         } else if (game.isThreefoldRepetition()) {
@@ -380,7 +602,12 @@ export function installChessOverlay(bus) {
             msg += `Draw.`;
         }
         listening = false;
-        injectReply(msg).catch(() => { });
+        try { updateStatus(); } catch {}
+        try {
+            const name = STATE?.replikaName || 'friend';
+            injectReply(`${name}, ${msg}`).catch(() => { });
+        } catch {}
+        try { log(msg); } catch {}
     }
 
     // subscribe to chat text
